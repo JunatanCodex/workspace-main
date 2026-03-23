@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { CommandPalette } from "@/components/command/command-palette";
 import { getAgents } from "@/lib/fs/agents";
 import { getTasks, getTaskLabel } from "@/lib/fs/tasks";
+import { readPipelineDefs } from "@/lib/pipelines/store";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -16,20 +17,25 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [agents, tasks] = await Promise.all([getAgents(), getTasks()]);
+  const [agents, tasks, pipelines] = await Promise.all([getAgents(), getTasks(), readPipelineDefs()]);
   const commandItems = [
     { label: "Overview", href: "/", kind: "page" },
     { label: "Agents", href: "/agents", kind: "page" },
     { label: "Tasks", href: "/tasks", kind: "page" },
     { label: "Business Pipeline", href: "/business-pipeline", kind: "page" },
     { label: "Developer Pipeline", href: "/developer-pipeline", kind: "page" },
+    { label: "Pipelines", href: "/pipelines", kind: "page" },
     { label: "Alerts", href: "/alerts", kind: "page" },
     { label: "Outputs", href: "/outputs", kind: "page" },
     { label: "Manual Control", href: "/actions", kind: "action" },
     { label: "CLI Control", href: "/cli", kind: "page" },
     { label: "Runtime Logs", href: "/runtime-logs", kind: "page" },
+    { label: "Quick action: Trigger orchestrator", href: "/actions", kind: "action" },
+    { label: "Quick action: Create task", href: "/actions", kind: "action" },
+    { label: "Quick action: Toggle auto-refresh", href: "/", kind: "action" },
     ...agents.map((agent) => ({ label: `Agent: ${agent.name}`, href: `/agents/${agent.id}`, kind: "agent" })),
     ...tasks.slice(0, 30).map((task, index) => ({ label: `Task: ${getTaskLabel(task)}`, href: `/tasks/${task.id || `task-${index}`}`, kind: "task" })),
+    ...pipelines.map((pipeline) => ({ label: `Pipeline: ${pipeline.name}`, href: "/pipelines", kind: "pipeline" })),
   ];
 
   return (

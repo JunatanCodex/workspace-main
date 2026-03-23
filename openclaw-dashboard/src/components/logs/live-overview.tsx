@@ -43,7 +43,7 @@ export function LiveOverview({ initial }: { initial: OverviewPayload }) {
         <StatCard label="Inactive agents" value={agents.filter((agent) => agent.status === "offline" || agent.status === "missing").length} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
         <section className="space-y-6">
           <div className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
             <SectionHeader title="Recent activity" description="Live feed from CLI executions, tasks, and agent state." />

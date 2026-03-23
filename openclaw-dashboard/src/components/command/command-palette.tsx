@@ -21,6 +21,15 @@ export function CommandPalette({ items }: { items: Array<{ label: string; href: 
   }, []);
 
   const filtered = useMemo(() => items.filter((item) => item.label.toLowerCase().includes(query.toLowerCase())), [items, query]);
+  const grouped = useMemo(() => {
+    const groups: Record<string, typeof filtered> = {};
+    for (const item of filtered) {
+      const kind = item.kind || "item";
+      if (!groups[kind]) groups[kind] = [];
+      groups[kind].push(item);
+    }
+    return groups;
+  }, [filtered]);
 
   if (!open) return null;
 
@@ -31,23 +40,28 @@ export function CommandPalette({ items }: { items: Array<{ label: string; href: 
           autoFocus
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search pages, agents, tasks, and quick actions..."
+          placeholder="Search pages, agents, tasks, pipelines, and quick actions..."
           className="w-full border-b border-white/10 bg-transparent px-5 py-4 text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
         />
         <div className="max-h-[55vh] overflow-y-auto p-2">
-          {filtered.map((item) => (
-            <button
-              key={`${item.href}-${item.label}`}
-              onClick={() => {
-                router.push(item.href);
-                setOpen(false);
-                setQuery("");
-              }}
-              className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm text-zinc-300 transition hover:bg-white/[0.04] hover:text-white"
-            >
-              <span>{item.label}</span>
-              <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">{item.kind || "item"}</span>
-            </button>
+          {Object.entries(grouped).map(([kind, values]) => (
+            <div key={kind} className="mb-4 last:mb-0">
+              <div className="px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-zinc-500">{kind}</div>
+              {values.map((item) => (
+                <button
+                  key={`${item.href}-${item.label}`}
+                  onClick={() => {
+                    router.push(item.href);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm text-zinc-300 transition hover:bg-white/[0.04] hover:text-white"
+                >
+                  <span>{item.label}</span>
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">↵</span>
+                </button>
+              ))}
+            </div>
           ))}
         </div>
       </div>
