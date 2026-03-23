@@ -88,7 +88,5 @@ export function formatRelative(value?: string): string {
 }
 
 export function formatReadableTimestamp(value?: string): string {
-  const dateTime = formatCalendarDateTime(value);
-  if (dateTime === "—") return dateTime;
-  return `${dateTime} (Asia/Manila)`;
+  return formatCalendarDateTime(value);
 }

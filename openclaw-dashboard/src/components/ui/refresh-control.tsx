@@ -41,7 +41,7 @@ export function RefreshControl() {
       <select value={intervalMs} onChange={(e) => setIntervalMs(Number(e.target.value))} className="bg-transparent text-zinc-300 outline-none">
         {REFRESH_INTERVALS.map((value) => <option key={value} value={value} className="bg-zinc-950">{value / 1000}s</option>)}
       </select>
-      <span className="text-zinc-500">Updated {lastUpdated} · Asia/Manila</span>
+      <span className="text-zinc-500">Updated {lastUpdated}</span>
     </div>
   );
 }

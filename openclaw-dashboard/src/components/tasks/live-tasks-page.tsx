@@ -25,7 +25,7 @@ export function LiveTasksPage({ initialTasks, filteredTasks }: { initialTasks: T
 
   return (
     <section className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
-      <SectionHeader title="Tasks" description={`${tasks.length} visible task(s) · live updated ${formatTime(updatedAt)} · Asia/Manila`} />
+      <SectionHeader title="Tasks" description={`${tasks.length} visible task(s) · live updated ${formatTime(updatedAt)}`} />
       {tasks.length === 0 ? (
         <EmptyState title="No tasks found" description="The shared queue is empty or your current filters excluded all tasks." />
       ) : (

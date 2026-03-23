@@ -33,7 +33,7 @@ export function LiveOverview({ initial }: { initial: OverviewPayload }) {
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Expected agents" value={overview.expectedAgents} hint={`Updated ${formatTime(updatedAt)} · Asia/Manila`} />
+        <StatCard label="Expected agents" value={overview.expectedAgents} hint={`Updated ${formatTime(updatedAt)}`} />
         <StatCard label="Registered agents" value={overview.registeredAgents} />
         <StatCard label="Queued tasks" value={overview.queuedTasks} />
         <StatCard label="In progress" value={overview.inProgressTasks} />
