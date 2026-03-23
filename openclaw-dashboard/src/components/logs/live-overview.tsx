@@ -10,7 +10,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useLiveJson } from "@/hooks/use-live-json";
 import type { AgentDetails, AlertItem, OverviewStats } from "@/lib/types";
-import { formatDateTime, formatRelative } from "@/lib/utils/time";
+import { formatReadableTimestamp, formatRelative, formatTime } from "@/lib/utils/time";
 
 type OverviewPayload = {
   overview: OverviewStats;
@@ -33,7 +33,7 @@ export function LiveOverview({ initial }: { initial: OverviewPayload }) {
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Expected agents" value={overview.expectedAgents} hint={`Updated ${new Date(updatedAt).toLocaleTimeString()}`} />
+        <StatCard label="Expected agents" value={overview.expectedAgents} hint={`Updated ${formatTime(updatedAt)} · Asia/Manila`} />
         <StatCard label="Registered agents" value={overview.registeredAgents} />
         <StatCard label="Queued tasks" value={overview.queuedTasks} />
         <StatCard label="In progress" value={overview.inProgressTasks} />
@@ -93,11 +93,11 @@ export function LiveOverview({ initial }: { initial: OverviewPayload }) {
               </div>
               <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Last orchestrator run</div>
-                <div className="mt-2 text-sm text-zinc-200">{formatRelative(overview.lastOrchestratorRun)} · {formatDateTime(overview.lastOrchestratorRun)}</div>
+                <div className="mt-2 text-sm text-zinc-200">{formatRelative(overview.lastOrchestratorRun)} · {formatReadableTimestamp(overview.lastOrchestratorRun)}</div>
               </div>
               <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Last digest update</div>
-                <div className="mt-2 text-sm text-zinc-200">{formatRelative(overview.lastDigestUpdate)} · {formatDateTime(overview.lastDigestUpdate)}</div>
+                <div className="mt-2 text-sm text-zinc-200">{formatRelative(overview.lastDigestUpdate)} · {formatReadableTimestamp(overview.lastDigestUpdate)}</div>
               </div>
             </div>
           </div>

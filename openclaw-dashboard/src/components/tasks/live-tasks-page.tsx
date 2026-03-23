@@ -5,6 +5,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { TaskRow } from "@/components/tasks/task-row";
 import { useLiveJson } from "@/hooks/use-live-json";
 import { getTaskLabelView } from "@/lib/utils/task-view";
+import { formatTime } from "@/lib/utils/time";
 import type { TaskRecord } from "@/lib/types";
 
 function isDuplicateCandidate(index: number, tasks: TaskRecord[]): boolean {
@@ -24,7 +25,7 @@ export function LiveTasksPage({ initialTasks, filteredTasks }: { initialTasks: T
 
   return (
     <section className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
-      <SectionHeader title="Tasks" description={`${tasks.length} visible task(s) · live updated ${new Date(updatedAt).toLocaleTimeString()}`} />
+      <SectionHeader title="Tasks" description={`${tasks.length} visible task(s) · live updated ${formatTime(updatedAt)} · Asia/Manila`} />
       {tasks.length === 0 ? (
         <EmptyState title="No tasks found" description="The shared queue is empty or your current filters excluded all tasks." />
       ) : (

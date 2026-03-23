@@ -1,3 +1,5 @@
+const DASHBOARD_TIME_ZONE = "Asia/Manila";
+
 export function parseDate(value?: string): Date | null {
   if (!value) return null;
   const date = new Date(value);
@@ -13,9 +15,25 @@ export function hoursSince(value?: string): number | null {
 export function formatDateTime(value?: string): string {
   const date = parseDate(value);
   if (!date) return "—";
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: DASHBOARD_TIME_ZONE,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
+export function formatTime(value?: string): string {
+  const date = parseDate(value);
+  if (!date) return "—";
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: DASHBOARD_TIME_ZONE,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   }).format(date);
 }
 
@@ -30,4 +48,10 @@ export function formatRelative(value?: string): string {
   if (Math.abs(hours) < 48) return rtf.format(hours, "hour");
   const days = Math.round(hours / 24);
   return rtf.format(days, "day");
+}
+
+export function formatReadableTimestamp(value?: string): string {
+  const dateTime = formatDateTime(value);
+  if (dateTime === "—") return dateTime;
+  return `${dateTime} (Asia/Manila)`;
 }

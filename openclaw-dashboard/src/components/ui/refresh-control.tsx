@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DEFAULT_REFRESH_MS, REFRESH_INTERVALS } from "@/lib/refresh/config";
+import { formatTime } from "@/lib/utils/time";
 
 function initialEnabled() {
   if (typeof window === "undefined") return true;
@@ -18,10 +19,10 @@ function initialInterval() {
 export function RefreshControl() {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [intervalMs, setIntervalMs] = useState(initialInterval);
-  const [lastUpdated, setLastUpdated] = useState<string>(new Date().toLocaleTimeString());
+  const [lastUpdated, setLastUpdated] = useState<string>(formatTime(new Date().toISOString()));
 
   useEffect(() => {
-    const onUpdated = () => setLastUpdated(new Date().toLocaleTimeString());
+    const onUpdated = () => setLastUpdated(formatTime(new Date().toISOString()));
     window.addEventListener("openclaw:refresh", onUpdated);
     return () => window.removeEventListener("openclaw:refresh", onUpdated);
   }, []);
@@ -40,7 +41,7 @@ export function RefreshControl() {
       <select value={intervalMs} onChange={(e) => setIntervalMs(Number(e.target.value))} className="bg-transparent text-zinc-300 outline-none">
         {REFRESH_INTERVALS.map((value) => <option key={value} value={value} className="bg-zinc-950">{value / 1000}s</option>)}
       </select>
-      <span className="text-zinc-500">Updated {lastUpdated}</span>
+      <span className="text-zinc-500">Updated {lastUpdated} · Asia/Manila</span>
     </div>
   );
 }
