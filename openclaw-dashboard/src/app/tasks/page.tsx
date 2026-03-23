@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { getTasks, getTaskLabel, isTaskFailed, isTaskStalled } from "@/lib/fs/tasks";
-import { formatDateTime, hoursSince } from "@/lib/utils/time";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TaskRow } from "@/components/tasks/task-row";
+import { getTasks, getTaskLabel } from "@/lib/fs/tasks";
+import { hoursSince } from "@/lib/utils/time";
 
 function pickValues(values: string | string[] | undefined): string[] {
   if (!values) return [];
@@ -44,72 +45,45 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
   });
 
   return (
-    <PageShell title="Task queue" description="Shared queue monitor for ~/.openclaw/shared/tasks.json with keyword search, agent/status/date filters, and explicit stalled/failure/duplicate hints.">
-      <form className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-4 md:grid-cols-[1fr_220px_220px_220px_auto]">
-        <input name="q" defaultValue={query} placeholder="Search by keyword" className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500" />
-        <select name="status" defaultValue={statusFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
-          <option value="all">All statuses</option>
-          {Array.from(new Set(tasks.map((task) => String(task.status || "queued")))).map((status) => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-        <select name="owner" defaultValue={ownerFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
-          <option value="all">All agents</option>
-          {owners.map((owner) => (
-            <option key={owner} value={owner}>{owner}</option>
-          ))}
-        </select>
-        <select name="date" defaultValue={dateFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
-          <option value="all">Any time</option>
-          <option value="today">Updated today</option>
-          <option value="week">Updated this week</option>
-        </select>
-        <button type="submit" className="rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900">Apply</button>
-      </form>
+    <PageShell title="Task queue" description="A Linear-style issue view for your shared agent queue: searchable, filterable, and optimized for scanning stuck work quickly.">
+      <section className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
+        <SectionHeader title="Filters" description="Search and refine the shared task queue by status, agent, and recency." />
+        <form className="grid gap-3 md:grid-cols-[1fr_220px_220px_220px_auto]">
+          <input name="q" defaultValue={query} placeholder="Search tasks" className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500" />
+          <select name="status" defaultValue={statusFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
+            <option value="all">All statuses</option>
+            {Array.from(new Set(tasks.map((task) => String(task.status || "queued")))).map((status) => <option key={status} value={status}>{status}</option>)}
+          </select>
+          <select name="owner" defaultValue={ownerFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
+            <option value="all">All agents</option>
+            {owners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+          </select>
+          <select name="date" defaultValue={dateFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
+            <option value="all">Any time</option>
+            <option value="today">Updated today</option>
+            <option value="week">Updated this week</option>
+          </select>
+          <button type="submit" className="rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900">Apply</button>
+        </form>
+      </section>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-zinc-900 p-5 text-zinc-400">No tasks matched the current filters.</div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((task, index) => {
-            const stalled = isTaskStalled(task);
-            const failed = isTaskFailed(task);
-            const duplicate = isDuplicateCandidate(index, filtered);
-            const staleHours = hoursSince(task.updatedAt || task.createdAt);
-            return (
-              <Link
+      <section className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
+        <SectionHeader title="Tasks" description={`${filtered.length} visible task(s) after filters.`} />
+        {filtered.length === 0 ? (
+          <EmptyState title="No tasks found" description="The shared queue is empty or your current filters excluded all tasks." />
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((task, index) => (
+              <TaskRow
                 key={task.id || `${getTaskLabel(task)}-${index}`}
+                task={task}
                 href={`/tasks/${task.id || `task-${index}`}`}
-                className={`block rounded-2xl border p-5 hover:bg-white/[0.03] ${failed ? "border-red-500/30 bg-red-500/[0.06]" : stalled ? "border-amber-500/30 bg-amber-500/[0.06]" : duplicate ? "border-violet-500/30 bg-violet-500/[0.05]" : "border-white/10 bg-zinc-900"}`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="font-medium text-zinc-100">{getTaskLabel(task)}</div>
-                    <div className="mt-1 text-sm text-zinc-400">Assigned to: {task.owner || "Unassigned"}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge value={task.status || "queued"} />
-                    {stalled ? <StatusBadge value="blocked" /> : null}
-                    {failed ? <StatusBadge value="failed" /> : null}
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-2 text-sm text-zinc-500 sm:grid-cols-3">
-                  <div>ID: {task.id || "—"}</div>
-                  <div>Created: {formatDateTime(task.createdAt)}</div>
-                  <div>Updated: {formatDateTime(task.updatedAt)}</div>
-                </div>
-                {stalled || failed || duplicate ? (
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    {stalled ? <span className="rounded-full bg-amber-500/20 px-3 py-1 text-amber-300">stalled {staleHours ? `(~${Math.round(staleHours)}h)` : ""}</span> : null}
-                    {failed ? <span className="rounded-full bg-red-500/20 px-3 py-1 text-red-300">failure detected</span> : null}
-                    {duplicate ? <span className="rounded-full bg-violet-500/20 px-3 py-1 text-violet-300">possible duplicate</span> : null}
-                  </div>
-                ) : null}
-              </Link>
-            );
-          })}
-        </div>
-      )}
+                duplicate={isDuplicateCandidate(index, filtered)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </PageShell>
   );
 }
