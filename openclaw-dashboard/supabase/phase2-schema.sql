@@ -1,6 +1,8 @@
 -- OpenClaw Dashboard Phase 2 schema
 -- Apply in Supabase SQL editor or migration flow.
 
+create extension if not exists pgcrypto;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
@@ -119,41 +121,64 @@ as $$
   select role from public.profiles where id = auth.uid()
 $$;
 
-create policy if not exists "profiles_select_own" on public.profiles
+drop policy if exists "profiles_select_own" on public.profiles;
+create policy "profiles_select_own" on public.profiles
 for select using (id = auth.uid());
 
-create policy if not exists "profiles_update_own_basic" on public.profiles
+drop policy if exists "profiles_update_own_basic" on public.profiles;
+create policy "profiles_update_own_basic" on public.profiles
 for update using (id = auth.uid())
 with check (id = auth.uid() and role = (select role from public.profiles where id = auth.uid()));
 
-create policy if not exists "dashboard_read_agents" on public.agents
-for select to authenticated using (true);
-create policy if not exists "dashboard_read_tasks" on public.tasks
-for select to authenticated using (true);
-create policy if not exists "dashboard_read_task_events" on public.task_events
-for select to authenticated using (true);
-create policy if not exists "dashboard_read_pipeline_runs" on public.pipeline_runs
-for select to authenticated using (true);
-create policy if not exists "dashboard_read_alerts" on public.alerts
+drop policy if exists "dashboard_read_agents" on public.agents;
+create policy "dashboard_read_agents" on public.agents
 for select to authenticated using (true);
 
-create policy if not exists "dashboard_write_agents_admin" on public.agents
-for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
-with check (public.get_my_role() in ('owner', 'admin'));
-create policy if not exists "dashboard_write_tasks_admin" on public.tasks
-for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
-with check (public.get_my_role() in ('owner', 'admin'));
-create policy if not exists "dashboard_write_task_events_admin" on public.task_events
-for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
-with check (public.get_my_role() in ('owner', 'admin'));
-create policy if not exists "dashboard_write_pipeline_runs_admin" on public.pipeline_runs
-for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
-with check (public.get_my_role() in ('owner', 'admin'));
-create policy if not exists "dashboard_write_alerts_admin" on public.alerts
+drop policy if exists "dashboard_read_tasks" on public.tasks;
+create policy "dashboard_read_tasks" on public.tasks
+for select to authenticated using (true);
+
+drop policy if exists "dashboard_read_task_events" on public.task_events;
+create policy "dashboard_read_task_events" on public.task_events
+for select to authenticated using (true);
+
+drop policy if exists "dashboard_read_pipeline_runs" on public.pipeline_runs;
+create policy "dashboard_read_pipeline_runs" on public.pipeline_runs
+for select to authenticated using (true);
+
+drop policy if exists "dashboard_read_alerts" on public.alerts;
+create policy "dashboard_read_alerts" on public.alerts
+for select to authenticated using (true);
+
+drop policy if exists "dashboard_write_agents_admin" on public.agents;
+create policy "dashboard_write_agents_admin" on public.agents
 for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
 with check (public.get_my_role() in ('owner', 'admin'));
 
-create policy if not exists "cli_audit_logs_admin_read" on public.cli_audit_logs
+drop policy if exists "dashboard_write_tasks_admin" on public.tasks;
+create policy "dashboard_write_tasks_admin" on public.tasks
+for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
+with check (public.get_my_role() in ('owner', 'admin'));
+
+drop policy if exists "dashboard_write_task_events_admin" on public.task_events;
+create policy "dashboard_write_task_events_admin" on public.task_events
+for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
+with check (public.get_my_role() in ('owner', 'admin'));
+
+drop policy if exists "dashboard_write_pipeline_runs_admin" on public.pipeline_runs;
+create policy "dashboard_write_pipeline_runs_admin" on public.pipeline_runs
+for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
+with check (public.get_my_role() in ('owner', 'admin'));
+
+drop policy if exists "dashboard_write_alerts_admin" on public.alerts;
+create policy "dashboard_write_alerts_admin" on public.alerts
+for all to authenticated using (public.get_my_role() in ('owner', 'admin'))
+with check (public.get_my_role() in ('owner', 'admin'));
+
+drop policy if exists "cli_audit_logs_admin_read" on public.cli_audit_logs;
+create policy "cli_audit_logs_admin_read" on public.cli_audit_logs
 for select to authenticated using (public.get_my_role() in ('owner', 'admin'));
-create policy if not exists "cli_audit_logs_admin_write" on public.cli_audit_logs
+
+drop policy if exists "cli_audit_logs_admin_write" on public.cli_audit_logs;
+create policy "cli_audit_logs_admin_write" on public.cli_audit_logs
 for insert to authenticated with check (public.get_my_role() in ('owner', 'admin'));
