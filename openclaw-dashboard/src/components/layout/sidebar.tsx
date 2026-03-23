@@ -9,6 +9,7 @@ const nav = [
   ["Alerts", "/alerts"],
   ["History", "/history"],
   ["Outputs", "/outputs"],
+  ["Manual Control", "/actions"],
 ];
 
 export function Sidebar() {

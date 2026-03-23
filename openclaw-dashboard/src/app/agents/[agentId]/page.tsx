@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ManualActionPanel } from "@/components/forms/manual-action-panel";
 import { getAgentById } from "@/lib/fs/agents";
 import { formatDateTime } from "@/lib/utils/time";
 import { getTaskLabel } from "@/lib/fs/tasks";
@@ -22,6 +23,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
               <div><dt className="text-zinc-500">Last run</dt><dd className="text-zinc-200">{formatDateTime(agent.lastRunTime)}</dd></div>
               <div><dt className="text-zinc-500">Last output</dt><dd className="text-zinc-200">{formatDateTime(agent.lastOutputTime)}</dd></div>
               <div><dt className="text-zinc-500">Latest output file</dt><dd className="text-zinc-200">{agent.latestOutputFile?.name || "None"}</dd></div>
+              <div><dt className="text-zinc-500">Open output explorer</dt><dd className="text-zinc-200"><Link href={`/outputs/${agent.id}`} className="underline decoration-zinc-700 underline-offset-4 hover:text-white">Browse workspace files</Link></dd></div>
             </dl>
           </div>
 
@@ -52,15 +54,16 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
             <h2 className="text-lg font-semibold text-zinc-50">Recent files</h2>
             <div className="mt-3 space-y-2 text-sm text-zinc-300">
               {agent.recentFiles.length ? agent.recentFiles.map((file) => (
-                <div key={file.path} className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <Link key={file.path} href={`/outputs/${agent.id}/browse/${encodeURIComponent(file.name)}`} className="block rounded-xl border border-white/10 bg-black/20 p-3 hover:bg-white/[0.03]">
                   <div className="font-medium text-zinc-100">{file.name}</div>
                   <div className="mt-1 text-zinc-500">{formatDateTime(file.modifiedAt)}</div>
-                </div>
+                </Link>
               )) : <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-400">No files found.</div>}
             </div>
           </div>
         </section>
       </div>
+      <ManualActionPanel />
     </PageShell>
   );
 }
