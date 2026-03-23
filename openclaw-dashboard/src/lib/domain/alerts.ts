@@ -1,11 +1,14 @@
 import type { AlertItem } from "@/lib/types";
+import { getOpenClawConfig } from "@/lib/fs/openclaw";
 import { getAgents } from "@/lib/fs/agents";
 import { getRoutingMap } from "@/lib/fs/routing";
 import { getTasks, isTaskFailed, isTaskStalled } from "@/lib/fs/tasks";
+import { isAgentUnstable, isHeartbeatLate, isQueuedOnDemandStuck } from "@/lib/domain/fleet-health";
 
 export async function getAlerts(): Promise<AlertItem[]> {
-  const [agents, tasks, routing] = await Promise.all([getAgents(), getTasks(), getRoutingMap()]);
+  const [agents, tasks, routing, config] = await Promise.all([getAgents(), getTasks(), getRoutingMap(), getOpenClawConfig()]);
   const alerts: AlertItem[] = [];
+  const heartbeatEvery = config.agents?.defaults?.heartbeat?.every || "60m";
 
   for (const agent of agents.filter((item) => item.isExpected && !item.isRegistered)) {
     alerts.push({
@@ -35,6 +38,38 @@ export async function getAlerts(): Promise<AlertItem[]> {
       description: `Task has been ${task.status} without an update for too long.`,
       href: `/tasks/${task.id || "unknown"}`,
     });
+  }
+
+  for (const agent of agents.filter((item) => item.isRegistered)) {
+    for (const task of agent.pendingTasks.filter((task) => isQueuedOnDemandStuck(task, agent.triggerType))) {
+      alerts.push({
+        type: "stalled_task",
+        title: `${agent.name} has a queued task stuck >30m`,
+        severity: "warning",
+        description: `${task.title || task.id || "Queued task"} has not advanced for more than 30 minutes.`,
+        href: `/tasks/${task.id || "unknown"}`,
+      });
+    }
+
+    if (isHeartbeatLate(agent, heartbeatEvery)) {
+      alerts.push({
+        type: "inactive_agent",
+        title: `${agent.name} missed expected heartbeat window`,
+        severity: "warning",
+        description: `No run detected in more than 2x the configured heartbeat interval (${heartbeatEvery}).`,
+        href: `/agents/${agent.id}`,
+      });
+    }
+
+    if (await isAgentUnstable(agent.id)) {
+      alerts.push({
+        type: "failure",
+        title: `${agent.name} appears unstable`,
+        severity: "critical",
+        description: "Recent runtime trigger logs show repeated errors for this agent.",
+        href: `/runtime-logs`,
+      });
+    }
   }
 
   for (const task of tasks.filter((item) => isTaskFailed(item))) {

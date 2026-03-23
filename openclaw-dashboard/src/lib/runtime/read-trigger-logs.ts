@@ -1,5 +1,6 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
+import { hoursSince } from "@/lib/utils/time";
 
 const LOG_DIR = path.join(process.cwd(), "runtime-logs");
 
@@ -32,4 +33,9 @@ export async function getTriggerLogs(): Promise<TriggerLogEntry[]> {
   } catch {
     return [];
   }
+}
+
+export async function getRecentAgentErrors(agentId: string, maxHours = 24): Promise<TriggerLogEntry[]> {
+  const logs = await getTriggerLogs();
+  return logs.filter((entry) => entry.agentId === agentId && entry.ok === false && (hoursSince(entry.startedAt) ?? Infinity) <= maxHours);
 }
