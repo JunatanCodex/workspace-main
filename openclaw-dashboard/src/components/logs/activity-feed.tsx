@@ -16,7 +16,7 @@ export function ActivityFeed({ items }: { items: Array<{ title: string; descript
             <div className="mt-2 text-sm text-zinc-400">{item.description}</div>
           </div>
         );
-        return item.href ? <Link key={`${item.title}-${item.at}`} href={item.href}>{content}</Link> : <div key={`${item.title}-${item.at}`}>{content}</div>;
+        return item.href ? <Link key={`${item.title}-${item.at}`} href={item.href} className="block">{content}</Link> : <div key={`${item.title}-${item.at}`} className="block">{content}</div>;
       })}
     </div>
   );
