@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { isAppRole, type AppRole } from "@/lib/auth/roles";
+import { ensureProfileForUser } from "@/lib/db/profiles";
 
 export type UserProfile = {
   id: string;
@@ -26,11 +27,7 @@ export const getCurrentSession = cache(async () => {
     return { user: null, profile: null, configured: true };
   }
 
-  const { data: profileData } = await supabase
-    .from("profiles")
-    .select("id,email,full_name,avatar_url,role")
-    .eq("id", user.id)
-    .maybeSingle();
+  const profileData = await ensureProfileForUser(user);
 
   const profile: UserProfile = {
     id: user.id,
