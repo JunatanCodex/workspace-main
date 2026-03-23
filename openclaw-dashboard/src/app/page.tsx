@@ -23,6 +23,8 @@ export default async function Home() {
 
   const orchestrator = agents.find((agent) => agent.id === "orchestrator");
   const signals = getSpecialistSignals(agents);
+  const fleetPreview = agents.slice(0, 6);
+  const alertPreview = alerts.slice(0, 6);
 
   return (
     <PageShell
@@ -61,6 +63,19 @@ export default async function Home() {
             description="Fast scan of the current fleet with health, trigger mode, and freshest signal."
             action={<Link href="/agents" className="text-sm text-zinc-400 hover:text-white">View all</Link>}
             defaultOpen={false}
+            collapsedPreview={
+              <div className="grid gap-3 lg:grid-cols-2">
+                {fleetPreview.map((agent) => (
+                  <Link key={agent.id} href={`/agents/${agent.id}`} className="rounded-2xl border border-white/8 bg-black/20 p-4 transition hover:bg-white/[0.03]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-medium text-zinc-100">{agent.emoji ? `${agent.emoji} ` : ""}{agent.name}</div>
+                      <StatusBadge value={agent.status} />
+                    </div>
+                    <div className="mt-2 text-sm text-zinc-400">{agent.focus || agent.role || "No role extracted yet."}</div>
+                  </Link>
+                ))}
+              </div>
+            }
           >
             <div className="grid gap-4 lg:grid-cols-2">
               {agents.map((agent) => <AgentCard key={agent.id} agent={agent} />)}
@@ -96,6 +111,22 @@ export default async function Home() {
             description="Status-driven operational issues, approvals, and failures."
             action={<Link href="/alerts" className="text-sm text-zinc-400 hover:text-white">Open</Link>}
             defaultOpen={false}
+            collapsedPreview={
+              <div className="space-y-3">
+                {alertPreview.length === 0 ? (
+                  <EmptyState title="No active alerts" description="The system is currently quiet. New approvals, failures, or routing issues will show up here." />
+                ) : (
+                  alertPreview.map((alert) => (
+                    <Link key={`${alert.type}-${alert.title}`} href={alert.href || "/alerts"} className="block rounded-2xl border border-white/8 bg-black/20 p-4 transition hover:bg-white/[0.03]">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-medium text-zinc-100">{alert.title}</div>
+                        <StatusBadge value={alert.severity === "critical" ? "needs_approval" : "blocked"} />
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            }
           >
             <div className="space-y-3">
               {alerts.length === 0 ? (
