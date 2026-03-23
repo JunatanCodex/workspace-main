@@ -3,13 +3,13 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ManualActionPanel } from "@/components/forms/manual-action-panel";
-import { getAgentById } from "@/lib/fs/agents";
+import { getAgentById, getAgents } from "@/lib/fs/agents";
 import { formatDateTime } from "@/lib/utils/time";
-import { getTaskLabel } from "@/lib/fs/tasks";
+import { getTaskLabel, getTasks } from "@/lib/fs/tasks";
 
 export default async function AgentDetailPage({ params }: { params: Promise<{ agentId: string }> }) {
   const { agentId } = await params;
-  const agent = await getAgentById(agentId);
+  const [agent, agents, tasks] = await Promise.all([getAgentById(agentId), getAgents(), getTasks()]);
   if (!agent) notFound();
 
   return (
@@ -63,7 +63,10 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
           </div>
         </section>
       </div>
-      <ManualActionPanel />
+      <ManualActionPanel
+        agentOptions={agents.map((item) => item.id)}
+        taskOptions={tasks.filter((task) => task.id).map((task) => ({ id: String(task.id), label: `${getTaskLabel(task)} (${task.status || "queued"})` }))}
+      />
     </PageShell>
   );
 }
