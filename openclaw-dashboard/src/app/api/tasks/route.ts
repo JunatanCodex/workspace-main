@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAuthenticatedUser } from "@/lib/auth/guard";
-import { getDashboardTasks } from "@/lib/db/tasks";
+import { getTasks } from "@/lib/fs/tasks";
 
 export async function GET() {
-  await requireAuthenticatedUser();
-  const tasks = await getDashboardTasks();
+  const tasks = await getTasks();
   return NextResponse.json({ tasks, updatedAt: new Date().toISOString() });
 }
