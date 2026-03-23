@@ -15,7 +15,8 @@ export type AgentHealth =
   | "waiting"
   | "needs approval"
   | "error"
-  | "offline";
+  | "offline"
+  | "missing";
 
 export type TriggerType = "on_demand" | "cron" | "heartbeat" | "unknown";
 
@@ -70,6 +71,11 @@ export interface AgentDetails {
   lastRunTime?: string;
   lastOutputTime?: string;
   summary: string;
+  focus?: string;
+  expectedOutputs: string[];
+  suggestedOutputFiles: AgentFileSummary[];
+  isExpected: boolean;
+  isRegistered: boolean;
 }
 
 export interface OverviewStats {

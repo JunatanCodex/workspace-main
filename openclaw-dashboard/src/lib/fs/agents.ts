@@ -1,6 +1,7 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import type { AgentConfig, AgentDetails, AgentFileSummary, TriggerType } from "@/lib/types";
+import { EXPECTED_FLEET, getFleetProfile } from "@/lib/fleet";
 import { cleanBullet, extractRole, extractSectionLines } from "@/lib/utils/text";
 import { getTasks } from "./tasks";
 import { getRegisteredAgents, getCronJobs } from "./openclaw";
@@ -8,6 +9,7 @@ import { readTextIfExists, statIfExists } from "./safe-read";
 import { inferAgentStatus } from "@/lib/domain/agent-status";
 
 const OUTPUT_EXTENSIONS = new Set([".md", ".json", ".txt", ".log"]);
+const NON_OUTPUT_FILES = new Set(["SOUL.md", "AGENTS.md", "README.md", "BOOTSTRAP.md", "HEARTBEAT.md", "IDENTITY.md", "TOOLS.md", "USER.md"]);
 
 async function listFilesShallow(dir: string): Promise<AgentFileSummary[]> {
   try {
@@ -41,33 +43,47 @@ function inferTriggerType(agent: AgentConfig, startupText: string, cronJobs: unk
   return "unknown";
 }
 
+function scoreOutputMatch(agentId: string, file: AgentFileSummary): number {
+  const profile = getFleetProfile(agentId);
+  const name = file.name.toLowerCase();
+  if (!profile) return 0;
+  return profile.outputKeywords.reduce((score, keyword) => score + (name.includes(keyword) ? 1 : 0), 0);
+}
+
 export async function getAgents(): Promise<AgentDetails[]> {
-  const [agents, tasks, cronJobs] = await Promise.all([getRegisteredAgents(), getTasks(), getCronJobs()]);
+  const [registeredAgents, tasks, cronJobs] = await Promise.all([getRegisteredAgents(), getTasks(), getCronJobs()]);
+  const registeredMap = new Map(registeredAgents.map((agent) => [agent.id, agent]));
+  const allIds = Array.from(new Set([...EXPECTED_FLEET.map((agent) => agent.id), ...registeredAgents.map((agent) => agent.id)])).sort();
 
   return Promise.all(
-    agents.map(async (agent) => {
-      const soulPath = path.join(agent.workspace, "SOUL.md");
-      const agentsPath = path.join(agent.workspace, "AGENTS.md");
+    allIds.map(async (agentId) => {
+      const registered = registeredMap.get(agentId);
+      const profile = getFleetProfile(agentId);
+      const workspace = registered?.workspace || path.join("/home/jim/.openclaw/agents", agentId);
+      const soulPath = path.join(workspace, "SOUL.md");
+      const agentsPath = path.join(workspace, "AGENTS.md");
       const [soul, startup, files] = await Promise.all([
         readTextIfExists(soulPath),
         readTextIfExists(agentsPath),
-        listFilesShallow(agent.workspace),
+        listFilesShallow(workspace),
       ]);
 
-      const pendingTasks = tasks.filter((task) => task.owner === agent.id && !["done", "cancelled"].includes(String(task.status)));
-      const recentCompletedTasks = tasks.filter((task) => task.owner === agent.id && task.status === "done");
-      const latestOutputFile = files.find((file) => OUTPUT_EXTENSIONS.has(path.extname(file.name)) && !["SOUL.md", "AGENTS.md", "README.md", "BOOTSTRAP.md", "HEARTBEAT.md", "IDENTITY.md", "TOOLS.md", "USER.md"].includes(file.name));
+      const pendingTasks = tasks.filter((task) => task.owner === agentId && !["done", "cancelled"].includes(String(task.status)));
+      const recentCompletedTasks = tasks.filter((task) => task.owner === agentId && task.status === "done");
+      const outputCandidates = files.filter((file) => OUTPUT_EXTENSIONS.has(path.extname(file.name)) && !NON_OUTPUT_FILES.has(file.name));
+      const suggestedOutputFiles = [...outputCandidates].sort((a, b) => scoreOutputMatch(agentId, b) - scoreOutputMatch(agentId, a) || b.modifiedAt.localeCompare(a.modifiedAt)).slice(0, 5);
+      const latestOutputFile = suggestedOutputFiles[0] || outputCandidates[0];
       const lastFile = files[0];
       const startupInstructions = extractSectionLines(startup || "", "Startup").map(cleanBullet);
       const schedule = extractSectionLines(startup || "", "Schedule / operating rhythm").map(cleanBullet);
-      const triggerType = inferTriggerType(agent, startup || "", cronJobs);
+      const triggerType = registered ? inferTriggerType(registered, startup || "", cronJobs) : "unknown";
       const lastRunTime = latestOutputFile?.modifiedAt || lastFile?.modifiedAt || (await statIfExists(agentsPath))?.mtime.toISOString();
       const details: AgentDetails = {
-        id: agent.id,
-        name: agent.identity?.name || agent.id,
-        emoji: agent.identity?.emoji,
-        workspace: agent.workspace,
-        role: extractRole(soul || ""),
+        id: agentId,
+        name: registered?.identity?.name || profile?.name || agentId,
+        emoji: registered?.identity?.emoji || profile?.emoji,
+        workspace,
+        role: extractRole(soul || "") || profile?.focus,
         startupInstructions,
         schedule,
         triggerType,
@@ -76,16 +92,23 @@ export async function getAgents(): Promise<AgentDetails[]> {
         recentFiles: files.slice(0, 8),
         pendingTasks,
         recentCompletedTasks,
-        status: "idle",
+        status: registered ? "idle" : "missing",
         lastRunTime,
         lastOutputTime: latestOutputFile?.modifiedAt,
-        summary: latestOutputFile
-          ? `Latest output: ${latestOutputFile.name}`
-          : pendingTasks.length > 0
-            ? `${pendingTasks.length} pending task(s), but no output file yet.`
-            : "No recent outputs yet.",
+        summary: !registered
+          ? "Expected in fleet model, but not yet registered in OpenClaw config."
+          : latestOutputFile
+            ? `Latest output: ${latestOutputFile.name}`
+            : pendingTasks.length > 0
+              ? `${pendingTasks.length} pending task(s), but no output file yet.`
+              : "No recent outputs yet.",
+        focus: profile?.focus,
+        expectedOutputs: profile?.expectedOutputs || [],
+        suggestedOutputFiles,
+        isExpected: Boolean(profile),
+        isRegistered: Boolean(registered),
       };
-      details.status = inferAgentStatus(details);
+      if (registered) details.status = inferAgentStatus(details);
       return details;
     }),
   );

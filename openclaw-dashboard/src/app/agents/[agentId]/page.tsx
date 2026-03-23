@@ -23,8 +23,11 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
               <div><dt className="text-zinc-500">Last run</dt><dd className="text-zinc-200">{formatDateTime(agent.lastRunTime)}</dd></div>
               <div><dt className="text-zinc-500">Last output</dt><dd className="text-zinc-200">{formatDateTime(agent.lastOutputTime)}</dd></div>
               <div><dt className="text-zinc-500">Latest output file</dt><dd className="text-zinc-200">{agent.latestOutputFile?.name || "None"}</dd></div>
+              <div><dt className="text-zinc-500">Expected output types</dt><dd className="text-zinc-200">{agent.expectedOutputs.length ? agent.expectedOutputs.join(", ") : "No explicit output profile"}</dd></div>
+              <div><dt className="text-zinc-500">Focus</dt><dd className="text-zinc-200">{agent.focus || "—"}</dd></div>
               <div><dt className="text-zinc-500">Open output explorer</dt><dd className="text-zinc-200"><Link href={`/outputs/${agent.id}`} className="underline decoration-zinc-700 underline-offset-4 hover:text-white">Browse workspace files</Link></dd></div>
             </dl>
+            {!agent.isRegistered ? <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] p-3 text-sm text-amber-200">This agent is part of your expected v2 fleet model, but it is not currently registered in OpenClaw.</div> : null}
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-zinc-900 p-5">
@@ -51,6 +54,18 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-zinc-900 p-5">
+            <h2 className="text-lg font-semibold text-zinc-50">Suggested outputs</h2>
+            <div className="mt-3 space-y-2 text-sm text-zinc-300">
+              {agent.suggestedOutputFiles.length ? agent.suggestedOutputFiles.map((file) => (
+                <Link key={file.path} href={`/outputs/${agent.id}/browse/${encodeURIComponent(file.name)}`} className="block rounded-xl border border-white/10 bg-black/20 p-3 hover:bg-white/[0.03]">
+                  <div className="font-medium text-zinc-100">{file.name}</div>
+                  <div className="mt-1 text-zinc-500">{formatDateTime(file.modifiedAt)}</div>
+                </Link>
+              )) : <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-400">No role-matched outputs found yet.</div>}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-zinc-900 p-5">
             <h2 className="text-lg font-semibold text-zinc-50">Recent files</h2>
             <div className="mt-3 space-y-2 text-sm text-zinc-300">
               {agent.recentFiles.length ? agent.recentFiles.map((file) => (
@@ -64,7 +79,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
         </section>
       </div>
       <ManualActionPanel
-        agentOptions={agents.map((item) => item.id)}
+        agentOptions={agents.filter((item) => item.isRegistered).map((item) => item.id)}
         taskOptions={tasks.filter((task) => task.id).map((task) => ({ id: String(task.id), label: `${getTaskLabel(task)} (${task.status || "queued"})` }))}
       />
     </PageShell>
