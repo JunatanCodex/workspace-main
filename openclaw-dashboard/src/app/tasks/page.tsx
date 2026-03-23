@@ -1,6 +1,6 @@
 import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/ui/section-header";
-import { getDashboardTasks } from "@/lib/db/tasks";
+import { getTasks } from "@/lib/fs/tasks";
 import { hoursSince } from "@/lib/utils/time";
 import { LiveTasksPage } from "@/components/tasks/live-tasks-page";
 
@@ -16,7 +16,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
   const dateFilter = pickValues(params.date)[0] || "all";
   const query = (pickValues(params.q)[0] || "").toLowerCase();
 
-  const tasks = await getDashboardTasks();
+  const tasks = await getTasks();
   const owners = Array.from(new Set(tasks.map((task) => task.owner).filter(Boolean))) as string[];
   const filtered = tasks.filter((task) => {
     const matchesStatus = statusFilter === "all" || String(task.status || "queued") === statusFilter;

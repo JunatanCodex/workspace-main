@@ -38,11 +38,6 @@ export async function getDashboardTasks(): Promise<TaskRecord[]> {
   }
 }
 
-export async function getDashboardTaskById(taskId: string): Promise<TaskRecord | null> {
-  const tasks = await getDashboardTasks();
-  return tasks.find((task) => task.id === taskId) || null;
-}
-
 export async function appendTaskEvent(event: DbTaskEventRow) {
   if (!hasSupabaseEnv()) return;
   try {

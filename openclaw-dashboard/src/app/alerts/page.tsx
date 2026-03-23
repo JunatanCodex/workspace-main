@@ -3,10 +3,10 @@ import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/ui/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getDashboardAlerts } from "@/lib/db/alerts";
+import { getAlerts } from "@/lib/domain/alerts";
 
 export default async function AlertsPage() {
-  const alerts = await getDashboardAlerts();
+  const alerts = await getAlerts();
   const groups = {
     critical: alerts.filter((alert) => alert.severity === "critical"),
     warning: alerts.filter((alert) => alert.severity === "warning"),

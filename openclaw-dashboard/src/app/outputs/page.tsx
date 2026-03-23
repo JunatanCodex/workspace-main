@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
-import { getDashboardAgents } from "@/lib/db/agents";
+import { getAgents } from "@/lib/fs/agents";
 import { formatDateTime } from "@/lib/utils/time";
 
 export default async function OutputsPage() {
-  const agents = await getDashboardAgents();
+  const agents = await getAgents();
   return (
     <PageShell title="Output explorer" description="Browse agent workspaces, jump to recent files, and preview text/markdown/JSON outputs.">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

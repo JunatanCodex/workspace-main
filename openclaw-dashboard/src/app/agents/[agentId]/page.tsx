@@ -6,14 +6,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ManualActionPanel } from "@/components/forms/manual-action-panel";
 import { AgentRoleWidgets } from "@/components/agents/agent-role-widgets";
-import { getDashboardAgentById, getDashboardAgents } from "@/lib/db/agents";
-import { getDashboardTasks } from "@/lib/db/tasks";
+import { getAgentById, getAgents } from "@/lib/fs/agents";
 import { formatDateTime } from "@/lib/utils/time";
-import { getTaskLabel } from "@/lib/fs/tasks";
+import { getTaskLabel, getTasks } from "@/lib/fs/tasks";
 
 export default async function AgentDetailPage({ params }: { params: Promise<{ agentId: string }> }) {
   const { agentId } = await params;
-  const [agent, agents, tasks] = await Promise.all([getDashboardAgentById(agentId), getDashboardAgents(), getDashboardTasks()]);
+  const [agent, agents, tasks] = await Promise.all([getAgentById(agentId), getAgents(), getTasks()]);
   if (!agent) notFound();
 
   return (
