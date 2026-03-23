@@ -1,18 +1,30 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getTasks, getTaskLabel, isTaskStalled } from "@/lib/fs/tasks";
-import { formatDateTime } from "@/lib/utils/time";
+import { getTasks, getTaskLabel, isTaskFailed, isTaskStalled } from "@/lib/fs/tasks";
+import { formatDateTime, hoursSince } from "@/lib/utils/time";
 
 function pickValues(values: string | string[] | undefined): string[] {
   if (!values) return [];
   return Array.isArray(values) ? values : [values];
 }
 
+function isDuplicateCandidate(index: number, tasks: ReturnType<typeof getTasks> extends Promise<infer T> ? T : never): boolean {
+  const task = tasks[index];
+  const basis = `${task.title || ""} ${task.description || ""}`.trim().toLowerCase();
+  if (!basis) return false;
+  return tasks.some((other, otherIndex) => {
+    if (otherIndex === index) return false;
+    const otherBasis = `${other.title || ""} ${other.description || ""}`.trim().toLowerCase();
+    return otherBasis && otherBasis === basis && (other.status !== "done" || task.status !== "done");
+  });
+}
+
 export default async function TasksPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const params = (await searchParams) || {};
   const statusFilter = pickValues(params.status)[0] || "all";
   const ownerFilter = pickValues(params.owner)[0] || "all";
+  const dateFilter = pickValues(params.date)[0] || "all";
   const query = (pickValues(params.q)[0] || "").toLowerCase();
 
   const tasks = await getTasks();
@@ -22,20 +34,35 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
     const matchesOwner = ownerFilter === "all" || String(task.owner || "") === ownerFilter;
     const haystack = JSON.stringify(task).toLowerCase();
     const matchesQuery = !query || haystack.includes(query);
-    return matchesStatus && matchesOwner && matchesQuery;
+    const ageHours = hoursSince(task.updatedAt || task.createdAt);
+    const matchesDate =
+      dateFilter === "all" ||
+      ageHours === null ||
+      (dateFilter === "today" && ageHours <= 24) ||
+      (dateFilter === "week" && ageHours <= 24 * 7);
+    return matchesStatus && matchesOwner && matchesQuery && matchesDate;
   });
 
   return (
-    <PageShell title="Task queue" description="Shared queue monitor for ~/.openclaw/shared/tasks.json with lightweight filters and keyword search.">
-      <form className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-4 md:grid-cols-[1fr_220px_220px_auto]">
+    <PageShell title="Task queue" description="Shared queue monitor for ~/.openclaw/shared/tasks.json with keyword search, agent/status/date filters, and explicit stalled/failure/duplicate hints.">
+      <form className="grid gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-4 md:grid-cols-[1fr_220px_220px_220px_auto]">
         <input name="q" defaultValue={query} placeholder="Search by keyword" className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500" />
         <select name="status" defaultValue={statusFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
           <option value="all">All statuses</option>
-          {Array.from(new Set(tasks.map((task) => String(task.status || "queued")))).map((status) => <option key={status} value={status}>{status}</option>)}
+          {Array.from(new Set(tasks.map((task) => String(task.status || "queued")))).map((status) => (
+            <option key={status} value={status}>{status}</option>
+          ))}
         </select>
         <select name="owner" defaultValue={ownerFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
           <option value="all">All agents</option>
-          {owners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+          {owners.map((owner) => (
+            <option key={owner} value={owner}>{owner}</option>
+          ))}
+        </select>
+        <select name="date" defaultValue={dateFilter} className="rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
+          <option value="all">Any time</option>
+          <option value="today">Updated today</option>
+          <option value="week">Updated this week</option>
         </select>
         <button type="submit" className="rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900">Apply</button>
       </form>
@@ -44,25 +71,43 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
         <div className="rounded-2xl border border-white/10 bg-zinc-900 p-5 text-zinc-400">No tasks matched the current filters.</div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((task, index) => (
-            <Link key={task.id || `${getTaskLabel(task)}-${index}`} href={`/tasks/${task.id || `task-${index}`}`} className="block rounded-2xl border border-white/10 bg-zinc-900 p-5 hover:bg-white/[0.03]">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="font-medium text-zinc-100">{getTaskLabel(task)}</div>
-                  <div className="mt-1 text-sm text-zinc-400">Assigned to: {task.owner || "Unassigned"}</div>
+          {filtered.map((task, index) => {
+            const stalled = isTaskStalled(task);
+            const failed = isTaskFailed(task);
+            const duplicate = isDuplicateCandidate(index, filtered);
+            const staleHours = hoursSince(task.updatedAt || task.createdAt);
+            return (
+              <Link
+                key={task.id || `${getTaskLabel(task)}-${index}`}
+                href={`/tasks/${task.id || `task-${index}`}`}
+                className={`block rounded-2xl border p-5 hover:bg-white/[0.03] ${failed ? "border-red-500/30 bg-red-500/[0.06]" : stalled ? "border-amber-500/30 bg-amber-500/[0.06]" : duplicate ? "border-violet-500/30 bg-violet-500/[0.05]" : "border-white/10 bg-zinc-900"}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-zinc-100">{getTaskLabel(task)}</div>
+                    <div className="mt-1 text-sm text-zinc-400">Assigned to: {task.owner || "Unassigned"}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge value={task.status || "queued"} />
+                    {stalled ? <StatusBadge value="blocked" /> : null}
+                    {failed ? <StatusBadge value="failed" /> : null}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge value={task.status || "queued"} />
-                  {isTaskStalled(task) ? <StatusBadge value="blocked" /> : null}
+                <div className="mt-3 grid gap-2 text-sm text-zinc-500 sm:grid-cols-3">
+                  <div>ID: {task.id || "—"}</div>
+                  <div>Created: {formatDateTime(task.createdAt)}</div>
+                  <div>Updated: {formatDateTime(task.updatedAt)}</div>
                 </div>
-              </div>
-              <div className="mt-3 grid gap-2 text-sm text-zinc-500 sm:grid-cols-3">
-                <div>ID: {task.id || "—"}</div>
-                <div>Created: {formatDateTime(task.createdAt)}</div>
-                <div>Updated: {formatDateTime(task.updatedAt)}</div>
-              </div>
-            </Link>
-          ))}
+                {stalled || failed || duplicate ? (
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    {stalled ? <span className="rounded-full bg-amber-500/20 px-3 py-1 text-amber-300">stalled {staleHours ? `(~${Math.round(staleHours)}h)` : ""}</span> : null}
+                    {failed ? <span className="rounded-full bg-red-500/20 px-3 py-1 text-red-300">failure detected</span> : null}
+                    {duplicate ? <span className="rounded-full bg-violet-500/20 px-3 py-1 text-violet-300">possible duplicate</span> : null}
+                  </div>
+                ) : null}
+              </Link>
+            );
+          })}
         </div>
       )}
     </PageShell>
