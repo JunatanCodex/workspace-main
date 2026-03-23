@@ -28,12 +28,7 @@ export function CollapsiblePanel({
           </button>
           {description ? <p className="mt-1 text-sm text-zinc-400">{description}</p> : null}
         </div>
-        <div className="flex items-center gap-3">
-          {action}
-          <button type="button" onClick={() => setOpen((v) => !v)} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-zinc-300 hover:bg-white/[0.06]">
-            {open ? "Collapse" : "Expand"}
-          </button>
-        </div>
+        <div className="flex items-center gap-3">{action}</div>
       </div>
 
       <div className={`grid transition-all duration-300 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
