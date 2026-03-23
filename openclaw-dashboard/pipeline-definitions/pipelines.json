@@ -1,0 +1,36 @@
+[
+  {
+    "id": "development-default",
+    "name": "Development Pipeline",
+    "kind": "development",
+    "enabled": true,
+    "autoRun": false,
+    "retries": 1,
+    "failureBehavior": "route_to_debugger",
+    "approvalGates": ["review-agent"],
+    "steps": [
+      { "agentId": "lead-developer", "label": "Architecture", "condition": "always" },
+      { "agentId": "feature-planner", "label": "Planning", "condition": "always" },
+      { "agentId": "implementation-agent", "label": "Implementation", "condition": "always" },
+      { "agentId": "review-agent", "label": "Review", "condition": "always" },
+      { "agentId": "debugger-agent", "label": "Debug", "condition": "on_failure" },
+      { "agentId": "ops-agent", "label": "Operations", "condition": "after_success" }
+    ]
+  },
+  {
+    "id": "business-default",
+    "name": "Business Pipeline",
+    "kind": "business",
+    "enabled": true,
+    "autoRun": false,
+    "retries": 1,
+    "failureBehavior": "stop",
+    "approvalGates": ["validation-agent"],
+    "steps": [
+      { "agentId": "niche-scout", "label": "Scout", "condition": "always" },
+      { "agentId": "validation-agent", "label": "Validate", "condition": "always" },
+      { "agentId": "fact-checker", "label": "Fact Check", "condition": "on_build_verdict" },
+      { "agentId": "freelancing-optimizer", "label": "Pitch / Package", "condition": "after_success" }
+    ]
+  }
+]
