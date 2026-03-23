@@ -29,6 +29,7 @@ export function RefreshControl() {
   useEffect(() => {
     localStorage.setItem("openclaw-refresh-enabled", JSON.stringify(enabled));
     localStorage.setItem("openclaw-refresh-interval", String(intervalMs));
+    window.dispatchEvent(new CustomEvent("openclaw:refresh-settings"));
   }, [enabled, intervalMs]);
 
   return (

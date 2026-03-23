@@ -1,24 +1,12 @@
 import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/ui/section-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { TaskRow } from "@/components/tasks/task-row";
-import { getTasks, getTaskLabel } from "@/lib/fs/tasks";
+import { getTasks } from "@/lib/fs/tasks";
 import { hoursSince } from "@/lib/utils/time";
+import { LiveTasksPage } from "@/components/tasks/live-tasks-page";
 
 function pickValues(values: string | string[] | undefined): string[] {
   if (!values) return [];
   return Array.isArray(values) ? values : [values];
-}
-
-function isDuplicateCandidate(index: number, tasks: ReturnType<typeof getTasks> extends Promise<infer T> ? T : never): boolean {
-  const task = tasks[index];
-  const basis = `${task.title || ""} ${task.description || ""}`.trim().toLowerCase();
-  if (!basis) return false;
-  return tasks.some((other, otherIndex) => {
-    if (otherIndex === index) return false;
-    const otherBasis = `${other.title || ""} ${other.description || ""}`.trim().toLowerCase();
-    return otherBasis && otherBasis === basis && (other.status !== "done" || task.status !== "done");
-  });
 }
 
 export default async function TasksPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
@@ -45,7 +33,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
   });
 
   return (
-    <PageShell title="Task queue" description="A Linear-style issue view for your shared agent queue: searchable, filterable, and optimized for scanning stuck work quickly.">
+    <PageShell title="Task queue" description="A Linear-style issue view for your shared agent queue: searchable, filterable, and now polling-backed for live operational monitoring.">
       <section className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
         <SectionHeader title="Filters" description="Search and refine the shared task queue by status, agent, and recency." />
         <form className="grid gap-3 md:grid-cols-[1fr_220px_220px_220px_auto]">
@@ -67,23 +55,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
         </form>
       </section>
 
-      <section className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
-        <SectionHeader title="Tasks" description={`${filtered.length} visible task(s) after filters.`} />
-        {filtered.length === 0 ? (
-          <EmptyState title="No tasks found" description="The shared queue is empty or your current filters excluded all tasks." />
-        ) : (
-          <div className="space-y-3">
-            {filtered.map((task, index) => (
-              <TaskRow
-                key={task.id || `${getTaskLabel(task)}-${index}`}
-                task={task}
-                href={`/tasks/${task.id || `task-${index}`}`}
-                duplicate={isDuplicateCandidate(index, filtered)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      <LiveTasksPage initialTasks={tasks} filteredTasks={filtered} />
     </PageShell>
   );
 }
