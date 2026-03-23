@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { getAgents } from "@/lib/fs/agents";
+import { requireAuthenticatedUser } from "@/lib/auth/guard";
+import { getDashboardAgents } from "@/lib/db/agents";
 
 export async function GET() {
-  const agents = await getAgents();
+  await requireAuthenticatedUser();
+  const agents = await getDashboardAgents();
   return NextResponse.json({ agents, updatedAt: new Date().toISOString() });
 }

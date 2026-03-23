@@ -1,5 +1,7 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
+import { getCurrentSession } from "@/lib/auth/session";
+import { getCliAuditLogs } from "@/lib/db/cli-audit-logs";
 
 const HISTORY_DIR = path.join(process.cwd(), "runtime-logs");
 const HISTORY_FILE = path.join(HISTORY_DIR, "cli-history.jsonl");
@@ -23,6 +25,12 @@ export async function appendCliHistory(record: CliExecutionRecord) {
 }
 
 export async function readCliHistory(limit = 50): Promise<CliExecutionRecord[]> {
+  const session = await getCurrentSession();
+  if (session.profile && (session.profile.role === "admin" || session.profile.role === "owner")) {
+    const dbLogs = await getCliAuditLogs(session.profile.role);
+    if (dbLogs.length > 0) return dbLogs.slice(0, limit);
+  }
+
   try {
     const raw = await fs.readFile(HISTORY_FILE, "utf8");
     return raw
