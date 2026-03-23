@@ -13,6 +13,7 @@ const nav = [
   ["Outputs", "/outputs"],
   ["Manual Control", "/actions"],
   ["Runtime Logs", "/runtime-logs"],
+  ["CLI", "/cli"],
 ];
 
 export function Sidebar() {
