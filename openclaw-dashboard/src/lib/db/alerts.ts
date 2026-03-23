@@ -28,30 +28,3 @@ export async function getDashboardAlerts(): Promise<AlertItem[]> {
     return getFileAlerts();
   }
 }
-
-export async function replaceAlerts(alerts: AlertItem[]) {
-  if (!hasSupabaseEnv()) return;
-  try {
-    const supabase = createSupabaseAdminClient();
-    const { error: deleteError } = await supabase.from("alerts").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    if (deleteError) throw deleteError;
-
-    if (!alerts.length) return;
-
-    const rows = alerts.map((alert) => ({
-      type: alert.type,
-      title: alert.title,
-      severity: alert.severity,
-      description: alert.description,
-      href: alert.href ?? null,
-      status: "open",
-      metadata: {},
-      updated_at: new Date().toISOString(),
-    }));
-
-    const { error } = await supabase.from("alerts").insert(rows);
-    if (error) throw error;
-  } catch (error) {
-    logDbFallback("alerts.replaceAlerts", error);
-  }
-}
