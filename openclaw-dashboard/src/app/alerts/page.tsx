@@ -5,7 +5,7 @@ import { getAlerts } from "@/lib/domain/alerts";
 export default async function AlertsPage() {
   const alerts = await getAlerts();
   return (
-    <PageShell title="Attention center" description="Tasks and agents that need your attention right now.">
+    <PageShell title="Attention center" description="Tasks, fleet gaps, routing warnings, missing outputs, and agents that need your attention right now.">
       <div className="space-y-3">
         {alerts.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-zinc-900 p-5 text-zinc-400">No active alerts.</div>

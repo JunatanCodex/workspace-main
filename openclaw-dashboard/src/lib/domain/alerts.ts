@@ -7,6 +7,16 @@ export async function getAlerts(): Promise<AlertItem[]> {
   const [agents, tasks, routing] = await Promise.all([getAgents(), getTasks(), getRoutingMap()]);
   const alerts: AlertItem[] = [];
 
+  for (const agent of agents.filter((item) => item.isExpected && !item.isRegistered)) {
+    alerts.push({
+      type: "missing_agent",
+      title: `${agent.name} is expected but not registered`,
+      severity: "warning",
+      description: "This agent exists in the fleet model, but OpenClaw is not currently configured to run it.",
+      href: `/agents/${agent.id}`,
+    });
+  }
+
   for (const task of tasks.filter((item) => item.status === "needs_approval")) {
     alerts.push({
       type: "needs_approval",
@@ -47,14 +57,24 @@ export async function getAlerts(): Promise<AlertItem[]> {
     });
   }
 
-  const knownAgents = new Set(agents.map((agent) => agent.id));
+  for (const agent of agents.filter((item) => item.isRegistered && item.expectedOutputs.length > 0 && item.suggestedOutputFiles.length === 0)) {
+    alerts.push({
+      type: "missing_output",
+      title: `${agent.name} has no role-matched outputs yet`,
+      severity: "info",
+      description: `Expected outputs include: ${agent.expectedOutputs.join(", ")}.`,
+      href: `/agents/${agent.id}`,
+    });
+  }
+
+  const knownAgents = new Set(agents.filter((agent) => agent.isRegistered).map((agent) => agent.id));
   for (const [taskType, owner] of Object.entries(routing.routes || {})) {
     if (!knownAgents.has(owner)) {
       alerts.push({
         type: "routing",
         title: `Invalid route for ${taskType}`,
         severity: "critical",
-        description: `Routing map points to missing agent: ${owner}`,
+        description: `Routing map points to missing or unregistered agent: ${owner}`,
         href: "/routing",
       });
     }

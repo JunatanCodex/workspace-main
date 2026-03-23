@@ -80,17 +80,22 @@ export interface AgentDetails {
 
 export interface OverviewStats {
   totalAgents: number;
+  registeredAgents: number;
+  expectedAgents: number;
+  missingAgents: number;
   queuedTasks: number;
   inProgressTasks: number;
   completedTasks: number;
   needsApprovalTasks: number;
   failedOrStalledTasks: number;
+  agentsWithoutSuggestedOutputs: number;
+  routingHealthy: boolean;
   lastOrchestratorRun?: string;
   lastDigestUpdate?: string;
 }
 
 export interface AlertItem {
-  type: "needs_approval" | "stalled_task" | "inactive_agent" | "routing" | "missing_output" | "failure";
+  type: "needs_approval" | "stalled_task" | "inactive_agent" | "routing" | "missing_output" | "failure" | "missing_agent";
   title: string;
   severity: "info" | "warning" | "critical";
   description: string;
