@@ -1,3 +1,4 @@
+import { triggerAgentAction, triggerOrchestratorAction } from "@/lib/actions/runtime";
 import { createTaskAction, markApprovalAction, requeueTaskAction } from "@/lib/actions/tasks";
 
 export function ManualActionPanel({
@@ -9,22 +10,29 @@ export function ManualActionPanel({
 }) {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-dashed border-white/15 bg-zinc-900 p-5">
-        <h2 className="text-lg font-semibold text-zinc-50">Runtime controls</h2>
-        <p className="mt-2 text-sm text-zinc-400">
-          These remain explicit placeholders for now. They are visible so the operational shape is there, but they are not pretending to execute live runtime actions yet.
-        </p>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {[
-            ["Trigger orchestrator", "Stub only in this version"],
-            ["Trigger agent manually", "Stub only in this version"],
-            ["Open workspace path", "UI placeholder; OS integration not wired"],
-          ].map(([label, note]) => (
-            <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <div className="font-medium text-zinc-100">{label}</div>
-              <div className="mt-1 text-sm text-zinc-500">{note}</div>
-            </div>
-          ))}
+      <div className="grid gap-6 xl:grid-cols-3">
+        <form action={triggerOrchestratorAction} className="rounded-2xl border border-white/10 bg-zinc-900 p-5">
+          <h3 className="text-lg font-semibold text-zinc-50">Trigger orchestrator</h3>
+          <p className="mt-2 text-sm text-zinc-400">Run the orchestrator through the local OpenClaw CLI. Trigger attempts are logged under <code>runtime-logs/</code> in this dashboard project.</p>
+          <textarea name="message" rows={4} placeholder="Optional instruction for orchestrator" className="mt-4 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500" />
+          <button type="submit" className="mt-4 rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900">Run orchestrator</button>
+        </form>
+
+        <form action={triggerAgentAction} className="rounded-2xl border border-white/10 bg-zinc-900 p-5">
+          <h3 className="text-lg font-semibold text-zinc-50">Trigger agent manually</h3>
+          <div className="mt-4 space-y-3">
+            <select name="agentId" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none">
+              <option value="">Select agent</option>
+              {agentOptions.map((agent) => <option key={agent} value={agent}>{agent}</option>)}
+            </select>
+            <textarea name="message" rows={4} placeholder="Instruction for selected agent" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500" />
+            <button type="submit" className="rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900">Trigger agent</button>
+          </div>
+        </form>
+
+        <div className="rounded-2xl border border-dashed border-white/15 bg-zinc-900 p-5">
+          <h3 className="text-lg font-semibold text-zinc-50">Open workspace path</h3>
+          <p className="mt-2 text-sm text-zinc-400">Still a placeholder. OS-level open/finder integration depends on the local desktop environment and should be wired deliberately rather than guessed.</p>
         </div>
       </div>
 
