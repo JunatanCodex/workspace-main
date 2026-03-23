@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function CommandPalette({ items }: { items: Array<{ label: string; href: string }> }) {
+export function CommandPalette({ items }: { items: Array<{ label: string; href: string; kind?: string }> }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -31,7 +31,7 @@ export function CommandPalette({ items }: { items: Array<{ label: string; href: 
           autoFocus
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search agents, tasks, and pages..."
+          placeholder="Search pages, agents, tasks, and quick actions..."
           className="w-full border-b border-white/10 bg-transparent px-5 py-4 text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
         />
         <div className="max-h-[55vh] overflow-y-auto p-2">
@@ -46,7 +46,7 @@ export function CommandPalette({ items }: { items: Array<{ label: string; href: 
               className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm text-zinc-300 transition hover:bg-white/[0.04] hover:text-white"
             >
               <span>{item.label}</span>
-              <span className="text-xs text-zinc-500">↵</span>
+              <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">{item.kind || "item"}</span>
             </button>
           ))}
         </div>

@@ -132,7 +132,7 @@ export default async function Home() {
               {alerts.length === 0 ? (
                 <EmptyState title="No active alerts" description="The system is currently quiet. New approvals, failures, or routing issues will show up here." />
               ) : (
-                alerts.slice(0, 8).map((alert) => (
+                alerts.slice(0, 10).map((alert) => (
                   <Link key={`${alert.type}-${alert.title}`} href={alert.href || "/alerts"} className="block rounded-2xl border border-white/8 bg-black/20 p-4 transition hover:bg-white/[0.03]">
                     <div className="flex items-center justify-between gap-2">
                       <div className="font-medium text-zinc-100">{alert.title}</div>

@@ -24,7 +24,7 @@ export function CollapsiblePanel({
         <div>
           <button type="button" onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 text-left">
             <span className="text-lg font-semibold tracking-tight text-zinc-50">{title}</span>
-            <span className="text-xs text-zinc-500">{open ? "▾" : "▸"}</span>
+            <span className="text-xs text-zinc-500 transition-transform duration-200" style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}>▾</span>
           </button>
           {description ? <p className="mt-1 text-sm text-zinc-400">{description}</p> : null}
         </div>
@@ -35,7 +35,14 @@ export function CollapsiblePanel({
           </button>
         </div>
       </div>
-      {open ? children : collapsedPreview || null}
+
+      <div className={`grid transition-all duration-300 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+        <div className="overflow-hidden">{children}</div>
+      </div>
+
+      <div className={`transition-all duration-300 ease-out ${open ? "max-h-0 overflow-hidden opacity-0" : "max-h-[1200px] opacity-100"}`}>
+        {collapsedPreview || null}
+      </div>
     </div>
   );
 }

@@ -1,22 +1,43 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getAlerts } from "@/lib/domain/alerts";
 
 export default async function AlertsPage() {
   const alerts = await getAlerts();
+  const groups = {
+    critical: alerts.filter((alert) => alert.severity === "critical"),
+    warning: alerts.filter((alert) => alert.severity === "warning"),
+    info: alerts.filter((alert) => alert.severity === "info"),
+  };
+
   return (
-    <PageShell title="Attention center" description="Tasks, fleet gaps, routing warnings, missing outputs, and agents that need your attention right now.">
-      <div className="space-y-3">
-        {alerts.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-zinc-900 p-5 text-zinc-400">No active alerts.</div>
-        ) : alerts.map((alert) => (
-          <Link key={`${alert.type}-${alert.title}`} href={alert.href || "#"} className="block rounded-2xl border border-white/10 bg-zinc-900 p-5 hover:bg-white/[0.03]">
-            <div className="font-medium text-zinc-100">{alert.title}</div>
-            <div className="mt-2 text-sm text-zinc-400">{alert.description}</div>
-            <div className="mt-3 text-xs uppercase tracking-wide text-zinc-500">{alert.type} · {alert.severity}</div>
-          </Link>
-        ))}
-      </div>
+    <PageShell title="Attention center" description="A grouped notification-style view for failures, approvals, routing issues, and system warnings.">
+      {alerts.length === 0 ? (
+        <EmptyState title="No active alerts" description="The system is currently quiet." />
+      ) : (
+        <div className="space-y-6">
+          {(["critical", "warning", "info"] as const).map((severity) => (
+            <section key={severity} className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
+              <SectionHeader title={`${severity[0].toUpperCase()}${severity.slice(1)} alerts`} description={`${groups[severity].length} item(s)`} />
+              <div className="space-y-3">
+                {groups[severity].length ? groups[severity].map((alert) => (
+                  <Link key={`${alert.type}-${alert.title}`} href={alert.href || "#"} className="block rounded-2xl border border-white/8 bg-black/20 p-4 transition hover:bg-white/[0.03]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-medium text-zinc-100">{alert.title}</div>
+                      <StatusBadge value={severity === "critical" ? "needs_approval" : severity === "warning" ? "blocked" : "idle"} />
+                    </div>
+                    <div className="mt-2 text-sm leading-6 text-zinc-400">{alert.description}</div>
+                    <div className="mt-3 text-[11px] uppercase tracking-[0.18em] text-zinc-500">{alert.type}</div>
+                  </Link>
+                )) : <EmptyState title={`No ${severity} alerts`} description={`Nothing in the ${severity} bucket right now.`} />}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </PageShell>
   );
 }

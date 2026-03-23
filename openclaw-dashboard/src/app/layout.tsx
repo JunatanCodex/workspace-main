@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CommandPalette } from "@/components/command/command-palette";
+import { getAgents } from "@/lib/fs/agents";
+import { getTasks, getTaskLabel } from "@/lib/fs/tasks";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -12,19 +14,23 @@ export const metadata: Metadata = {
   description: "Local dashboard for monitoring OpenClaw agents, tasks, and outputs.",
 };
 
-const commandItems = [
-  { label: "Overview", href: "/" },
-  { label: "Agents", href: "/agents" },
-  { label: "Tasks", href: "/tasks" },
-  { label: "Business Pipeline", href: "/business-pipeline" },
-  { label: "Developer Pipeline", href: "/developer-pipeline" },
-  { label: "Alerts", href: "/alerts" },
-  { label: "Outputs", href: "/outputs" },
-  { label: "Manual Control", href: "/actions" },
-  { label: "Runtime Logs", href: "/runtime-logs" },
-];
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const [agents, tasks] = await Promise.all([getAgents(), getTasks()]);
+  const commandItems = [
+    { label: "Overview", href: "/", kind: "page" },
+    { label: "Agents", href: "/agents", kind: "page" },
+    { label: "Tasks", href: "/tasks", kind: "page" },
+    { label: "Business Pipeline", href: "/business-pipeline", kind: "page" },
+    { label: "Developer Pipeline", href: "/developer-pipeline", kind: "page" },
+    { label: "Alerts", href: "/alerts", kind: "page" },
+    { label: "Outputs", href: "/outputs", kind: "page" },
+    { label: "Manual Control", href: "/actions", kind: "page" },
+    { label: "Runtime Logs", href: "/runtime-logs", kind: "page" },
+    ...agents.map((agent) => ({ label: `Agent: ${agent.name}`, href: `/agents/${agent.id}`, kind: "agent" })),
+    ...tasks.slice(0, 30).map((task, index) => ({ label: `Task: ${getTaskLabel(task)}`, href: `/tasks/${task.id || `task-${index}`}`, kind: "task" })),
+    { label: "Quick action: Manual Control", href: "/actions", kind: "action" },
+  ];
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark h-full`}>
       <body className="min-h-full bg-[#07070a] text-zinc-100 antialiased">
