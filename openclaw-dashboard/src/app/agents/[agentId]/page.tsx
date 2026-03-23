@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ManualActionPanel } from "@/components/forms/manual-action-panel";
+import { AgentRoleWidgets } from "@/components/agents/agent-role-widgets";
 import { getAgentById, getAgents } from "@/lib/fs/agents";
 import { formatDateTime } from "@/lib/utils/time";
 import { getTaskLabel, getTasks } from "@/lib/fs/tasks";
@@ -29,6 +30,8 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ ag
             </dl>
             {!agent.isRegistered ? <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.08] p-3 text-sm text-amber-200">This agent is part of your expected v2 fleet model, but it is not currently registered in OpenClaw.</div> : null}
           </div>
+
+          <AgentRoleWidgets agent={agent} />
 
           <div className="rounded-2xl border border-white/10 bg-zinc-900 p-5">
             <h2 className="text-lg font-semibold text-zinc-50">Startup instructions</h2>
