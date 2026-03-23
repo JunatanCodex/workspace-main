@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
+import { CollapsiblePanel } from "@/components/layout/collapsible-panel";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -55,12 +56,16 @@ export default async function Home() {
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
         <section className="space-y-6">
-          <div className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
-            <SectionHeader title="Fleet status" description="Fast scan of the current fleet with health, trigger mode, and freshest signal." action={<Link href="/agents" className="text-sm text-zinc-400 hover:text-white">View all</Link>} />
+          <CollapsiblePanel
+            title="Fleet status"
+            description="Fast scan of the current fleet with health, trigger mode, and freshest signal."
+            action={<Link href="/agents" className="text-sm text-zinc-400 hover:text-white">View all</Link>}
+            defaultOpen={false}
+          >
             <div className="grid gap-4 lg:grid-cols-2">
               {agents.map((agent) => <AgentCard key={agent.id} agent={agent} />)}
             </div>
-          </div>
+          </CollapsiblePanel>
 
           <div className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
             <SectionHeader title="Orchestrator health" description="Queue, routing, and digest health in one place." action={<Link href="/agents/orchestrator" className="text-sm text-zinc-400 hover:text-white">Open</Link>} />
@@ -86,8 +91,12 @@ export default async function Home() {
         </section>
 
         <section className="space-y-6">
-          <div className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
-            <SectionHeader title="Alert center" description="Status-driven operational issues, approvals, and failures." action={<Link href="/alerts" className="text-sm text-zinc-400 hover:text-white">Open</Link>} />
+          <CollapsiblePanel
+            title="Alert center"
+            description="Status-driven operational issues, approvals, and failures."
+            action={<Link href="/alerts" className="text-sm text-zinc-400 hover:text-white">Open</Link>}
+            defaultOpen={false}
+          >
             <div className="space-y-3">
               {alerts.length === 0 ? (
                 <EmptyState title="No active alerts" description="The system is currently quiet. New approvals, failures, or routing issues will show up here." />
@@ -103,7 +112,7 @@ export default async function Home() {
                 ))
               )}
             </div>
-          </div>
+          </CollapsiblePanel>
 
           <div className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
             <SectionHeader title="Digest" description="Latest daily summary from the orchestrator." action={<Link href="/digest" className="text-sm text-zinc-400 hover:text-white">Open</Link>} />
