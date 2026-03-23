@@ -4,6 +4,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getAlerts } from "@/lib/domain/alerts";
 import { getOverviewStats } from "@/lib/domain/overview";
+import { getSpecialistSignals } from "@/lib/domain/specialist-signals";
 import { getAgents } from "@/lib/fs/agents";
 import { getDigest } from "@/lib/fs/digest";
 import { formatDateTime, formatRelative } from "@/lib/utils/time";
@@ -17,6 +18,7 @@ export default async function Home() {
   ]);
 
   const orchestrator = agents.find((agent) => agent.id === "orchestrator");
+  const signals = getSpecialistSignals(agents);
 
   return (
     <PageShell
@@ -36,6 +38,16 @@ export default async function Home() {
         <StatCard label="Routing health" value={overview.routingHealthy ? "Healthy" : "Warning"} />
         <StatCard label="Last orchestrator run" value={formatRelative(overview.lastOrchestratorRun)} hint={formatDateTime(overview.lastOrchestratorRun)} />
         <StatCard label="Last digest update" value={formatRelative(overview.lastDigestUpdate)} hint={formatDateTime(overview.lastDigestUpdate)} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-5">
+        {signals.map((signal) => (
+          <Link key={signal.title} href={signal.href} className="rounded-2xl border border-white/10 bg-zinc-900 p-5 hover:bg-white/[0.03]">
+            <div className="text-xs uppercase tracking-wide text-zinc-500">{signal.title}</div>
+            <div className="mt-2 font-medium text-zinc-100">{signal.agentId}</div>
+            <div className="mt-2 text-sm text-zinc-400">{signal.summary}</div>
+          </Link>
+        ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
