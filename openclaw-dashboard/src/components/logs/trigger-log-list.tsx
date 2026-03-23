@@ -1,4 +1,4 @@
-import { formatDateTime } from "@/lib/utils/time";
+import { formatReadableTimestamp } from "@/lib/utils/time";
 import type { TriggerLogEntry } from "@/lib/runtime/read-trigger-logs";
 
 export function TriggerLogList({ logs }: { logs: TriggerLogEntry[] }) {
@@ -13,7 +13,7 @@ export function TriggerLogList({ logs }: { logs: TriggerLogEntry[] }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="font-medium text-zinc-100">{log.agentId || "unknown-agent"}</div>
-              <div className="mt-1 text-sm text-zinc-500">Started: {formatDateTime(log.startedAt)}</div>
+              <div className="mt-1 text-sm text-zinc-500">Started: {formatReadableTimestamp(log.startedAt)}</div>
             </div>
             <div className={`rounded-full px-3 py-1 text-xs font-medium ${log.ok ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300"}`}>
               {log.ok ? "success" : "failed"}

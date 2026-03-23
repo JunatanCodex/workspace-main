@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { TaskRecord } from "@/lib/types";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getTaskLabelView, isTaskFailedView, isTaskStalledView } from "@/lib/utils/task-view";
-import { formatDateTime, hoursSince } from "@/lib/utils/time";
+import { formatCalendarDateTime, hoursSince } from "@/lib/utils/time";
 
 export function TaskRow({ task, href, duplicate = false }: { task: TaskRecord; href: string; duplicate?: boolean }) {
   const stalled = isTaskStalledView(task);
@@ -32,7 +32,7 @@ export function TaskRow({ task, href, duplicate = false }: { task: TaskRecord; h
       </div>
       <div>
         <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">Updated</div>
-        <div className="mt-2 text-sm text-zinc-200">{formatDateTime(task.updatedAt)}</div>
+        <div className="mt-2 text-sm text-zinc-200">{formatCalendarDateTime(task.updatedAt)}</div>
       </div>
     </Link>
   );

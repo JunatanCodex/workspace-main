@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { AgentDetails } from "@/lib/types";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDateTime } from "@/lib/utils/time";
+import { formatCalendarDateTime } from "@/lib/utils/time";
 
 export function AgentCard({ agent }: { agent: AgentDetails }) {
   return (
@@ -20,7 +20,7 @@ export function AgentCard({ agent }: { agent: AgentDetails }) {
       <div className="mt-4 grid gap-3 text-xs text-zinc-500 sm:grid-cols-3">
         <div>
           <div className="uppercase tracking-wide">Last run</div>
-          <div className="mt-1 text-zinc-300">{formatDateTime(agent.lastRunTime)}</div>
+          <div className="mt-1 text-zinc-300">{formatCalendarDateTime(agent.lastRunTime)}</div>
         </div>
         <div>
           <div className="uppercase tracking-wide">Tasks</div>

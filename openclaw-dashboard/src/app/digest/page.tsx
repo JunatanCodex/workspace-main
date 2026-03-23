@@ -2,7 +2,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/ui/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDigest } from "@/lib/fs/digest";
-import { formatDateTime } from "@/lib/utils/time";
+import { formatReadableTimestamp } from "@/lib/utils/time";
 
 function section(content: string, heading: string) {
   const match = content.match(new RegExp(`(?:^|\\n)#+\\s*${heading}\\s*\\n([\\s\\S]*?)(?=\\n#+\\s|$)`, "i"));
@@ -20,7 +20,7 @@ export default async function DigestPage() {
       <div className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
         <section className="space-y-6">
           <div className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
-            <SectionHeader title="Digest metadata" description={`Last updated ${formatDateTime(digest.updatedAt)}`} />
+            <SectionHeader title="Digest metadata" description={`Last updated ${formatReadableTimestamp(digest.updatedAt)}`} />
             <div className="space-y-4">
               {attention ? <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.08] p-4 text-sm text-amber-100"><div className="font-medium text-amber-200">Needs attention</div><div className="mt-2 whitespace-pre-wrap">{attention}</div></div> : null}
               {blocked ? <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.08] p-4 text-sm text-red-100"><div className="font-medium text-red-200">Blocked</div><div className="mt-2 whitespace-pre-wrap">{blocked}</div></div> : null}
