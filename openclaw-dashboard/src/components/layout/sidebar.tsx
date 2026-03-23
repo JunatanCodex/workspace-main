@@ -17,15 +17,22 @@ const nav = [
 
 export function Sidebar() {
   return (
-    <aside className="w-full border-b border-white/10 bg-zinc-950 lg:min-h-screen lg:w-64 lg:border-b-0 lg:border-r">
-      <div className="px-5 py-4">
-        <div className="text-lg font-semibold text-zinc-50">OpenClaw Dashboard</div>
-        <div className="mt-1 text-sm text-zinc-400">Local fleet visibility for a solo operator.</div>
+    <aside className="w-full border-b border-white/6 bg-[#0a0a0d]/90 backdrop-blur lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
+      <div className="px-5 py-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-[0.22em] text-zinc-500">OpenClaw</div>
+            <div className="mt-2 text-xl font-semibold tracking-tight text-zinc-50">Agent Console</div>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-zinc-400">⌘K</div>
+        </div>
+        <div className="mt-3 text-sm text-zinc-400">Premium local dashboard for operational visibility, control, and pipelines.</div>
       </div>
-      <nav className="grid gap-1 px-3 pb-4 lg:block">
+      <nav className="grid gap-1 px-3 pb-5 lg:block">
         {nav.map(([label, href]) => (
-          <Link key={href} href={href} className="block rounded-xl px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white">
-            {label}
+          <Link key={href} href={href} className="group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-white/[0.04] hover:text-white">
+            <span>{label}</span>
+            <span className="opacity-0 text-xs text-zinc-500 transition group-hover:opacity-100">→</span>
           </Link>
         ))}
       </nav>
