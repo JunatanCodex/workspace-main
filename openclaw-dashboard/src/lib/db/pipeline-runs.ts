@@ -16,3 +16,33 @@ export async function getDashboardPipelineRuns(): Promise<DbPipelineRunRow[]> {
     return [];
   }
 }
+
+export async function replacePipelineRuns(runs: DbPipelineRunRow[]) {
+  if (!hasSupabaseEnv()) return;
+
+  try {
+    const supabase = createSupabaseAdminClient();
+    const { error: deleteError } = await supabase.from("pipeline_runs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    if (deleteError) throw deleteError;
+
+    if (!runs.length) return;
+
+    const rows = runs.map((run) => ({
+      id: run.id,
+      pipeline_name: run.pipeline_name,
+      source_task_id: run.source_task_id,
+      current_stage: run.current_stage,
+      stage_status: run.stage_status,
+      final_status: run.final_status,
+      linked_task_ids: run.linked_task_ids ?? [],
+      metadata: run.metadata ?? {},
+      started_at: run.started_at ?? new Date().toISOString(),
+      updated_at: run.updated_at ?? new Date().toISOString(),
+    }));
+
+    const { error } = await supabase.from("pipeline_runs").insert(rows);
+    if (error) throw error;
+  } catch (error) {
+    logDbFallback("pipeline-runs.replacePipelineRuns", error);
+  }
+}
