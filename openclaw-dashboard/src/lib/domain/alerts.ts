@@ -3,10 +3,11 @@ import { getOpenClawConfig } from "@/lib/fs/openclaw";
 import { getAgents } from "@/lib/fs/agents";
 import { getRoutingMap } from "@/lib/fs/routing";
 import { getTasks, isTaskFailed, isTaskStalled } from "@/lib/fs/tasks";
+import { getSharedEvents } from "@/lib/fs/events";
 import { isAgentUnstable, isHeartbeatLate, isQueuedOnDemandStuck } from "@/lib/domain/fleet-health";
 
 export async function getAlerts(): Promise<AlertItem[]> {
-  const [agents, tasks, routing, config] = await Promise.all([getAgents(), getTasks(), getRoutingMap(), getOpenClawConfig()]);
+  const [agents, tasks, routing, config, events] = await Promise.all([getAgents(), getTasks(), getRoutingMap(), getOpenClawConfig(), getSharedEvents()]);
   const alerts: AlertItem[] = [];
   const heartbeatEvery = config.agents?.defaults?.heartbeat?.every || "60m";
 
@@ -113,6 +114,20 @@ export async function getAlerts(): Promise<AlertItem[]> {
         href: "/routing",
       });
     }
+  }
+
+  const recentMaintenance = events
+    .filter((event) => event.action_taken === "cancelled_duplicate_downstream_tasks")
+    .sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || "")))[0];
+
+  if (recentMaintenance) {
+    alerts.push({
+      type: "maintenance",
+      title: "Queue hygiene automation ran",
+      severity: "info",
+      description: recentMaintenance.notes || "Deterministic automation cancelled duplicate downstream tasks.",
+      href: "/digest",
+    });
   }
 
   return alerts;

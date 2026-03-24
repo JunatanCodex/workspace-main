@@ -1,15 +1,22 @@
 import { getAgents } from "@/lib/fs/agents";
 import { getTasks, getTaskLabel } from "@/lib/fs/tasks";
+import { getSharedEvents } from "@/lib/fs/events";
 import { readCliHistory } from "@/lib/cli/history";
 
 export async function getRecentActivity(limit = 12) {
-  const [agents, tasks, cli] = await Promise.all([getAgents(), getTasks(), readCliHistory(20)]);
+  const [agents, tasks, events, cli] = await Promise.all([getAgents(), getTasks(), getSharedEvents(), readCliHistory(20)]);
   const items = [
     ...cli.map((entry) => ({
       title: entry.label,
       description: entry.ok ? "CLI-backed action completed." : `CLI-backed action failed${entry.note ? `: ${entry.note}` : "."}`,
       href: "/cli",
       at: entry.timestamp,
+    })),
+    ...events.slice(-10).map((event) => ({
+      title: event.action_taken || event.event_type || "Shared automation event",
+      description: event.notes || `Shared event from ${event.source_agent || "orchestrator"}.`,
+      href: "/digest",
+      at: event.timestamp || "—",
     })),
     ...tasks.slice(0, 10).map((task) => ({
       title: getTaskLabel(task),

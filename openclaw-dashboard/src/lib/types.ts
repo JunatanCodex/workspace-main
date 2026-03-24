@@ -95,7 +95,7 @@ export interface OverviewStats {
 }
 
 export interface AlertItem {
-  type: "needs_approval" | "stalled_task" | "inactive_agent" | "routing" | "missing_output" | "failure" | "missing_agent";
+  type: "needs_approval" | "stalled_task" | "inactive_agent" | "routing" | "missing_output" | "failure" | "missing_agent" | "maintenance";
   title: string;
   severity: "info" | "warning" | "critical";
   description: string;

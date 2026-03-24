@@ -6,6 +6,7 @@ export const SHARED_ROOT = path.join(OPENCLAW_ROOT, "shared");
 export const TASKS_FILE = path.join(SHARED_ROOT, "tasks.json");
 export const ROUTING_FILE = path.join(SHARED_ROOT, "routing-map.json");
 export const DIGEST_FILE = path.join(SHARED_ROOT, "digest.md");
+export const EVENTS_FILE = path.join(SHARED_ROOT, "event-log.json");
 export const OPENCLAW_CONFIG_FILE = path.join(OPENCLAW_ROOT, "openclaw.json");
 export const LOGS_ROOT = path.join(OPENCLAW_ROOT, "logs");
 export const CRON_JOBS_FILE = path.join(OPENCLAW_ROOT, "cron", "jobs.json");
