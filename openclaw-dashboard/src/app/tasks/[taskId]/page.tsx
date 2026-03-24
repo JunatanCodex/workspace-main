@@ -48,7 +48,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ tas
             </div>
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <div className="space-y-6">
             <div className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
               <SectionHeader title="Full payload" description="Raw task object for debugging and inspection." />
               <pre className="overflow-x-auto rounded-2xl border border-white/8 bg-black/30 p-4 text-xs text-zinc-300">{JSON.stringify(task, null, 2)}</pre>
@@ -57,7 +57,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ tas
             <div className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
               <SectionHeader title="Status history" description="Shows all recorded status transitions when available." />
               {Array.isArray(task.statusHistory) && task.statusHistory.length ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3">
                   {task.statusHistory.map((entry, index) => (
                     <div key={`${entry.status}-${entry.at || index}`} className="rounded-2xl border border-white/8 bg-black/20 p-4">
                       <div className="flex items-center justify-between gap-3">
