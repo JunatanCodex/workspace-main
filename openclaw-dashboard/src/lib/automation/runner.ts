@@ -1,8 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { sharedStore, SharedAutomationRules, SharedEvent, SharedPipelineDef, SharedPipelineRun } from "@/lib/automation/store";
-import { appendTriggerLog } from "@/lib/runtime/trigger-log";
 
 type TaskStatus = 'queued' | 'in_progress' | 'done' | 'failed' | 'needs_approval' | 'blocked' | 'cancelled';
 
@@ -214,179 +212,6 @@ function inferPlanArtifact(task: Task) {
   return outputs.find((file) => /(plan|breakdown|spec)/i.test(file)) || outputs[0] || null;
 }
 
-function buildImplementationTriggerMessage(task: Task) {
-  const taskId = String(task.id || '');
-  const context = task.context || {};
-  const planArtifact = String(context.planArtifact || '');
-  const projectWorkspace = String(context.projectWorkspace || '');
-  const upstreamTaskId = String(context.upstreamTaskId || context.dependsOn || '');
-  const summaryFile = artifactPath(taskId, 'implementation-summary.md');
-  const changedFilesFile = artifactPath(taskId, 'changed-files.json');
-  const executionLogFile = artifactPath(taskId, 'execution-log.txt');
-  const runResultsFile = artifactPath(taskId, 'run-results.json');
-
-  return [
-    `Process implementation task ${taskId} automatically.`,
-    `Task title: ${String(task.title || task.description || taskId)}`,
-    `Approved project workspace: ${projectWorkspace}`,
-    `Upstream plan task id: ${upstreamTaskId}`,
-    `Plan artifact: ${planArtifact}`,
-    '',
-    'Critical task-selection rules:',
-    `- You must operate on the existing shared task with id ${taskId}.`,
-    `- Do not create a new task. Do not rename the task. Do not switch to a different implementation task unless ${taskId} is missing from ~/.openclaw/shared/tasks.json.`,
-    `- If ${taskId} exists and is queued, move that exact task to in_progress before coding.`,
-    `- If there are other similar implementation tasks for the same upstream plan, ignore them unless they are this exact task id.`,
-    '',
-    'Requirements:',
-    '- Read the approved plan and upstream context first.',
-    '- Work only inside the approved project workspace.',
-    '- If the approved workspace already contains a project, modify that project instead of scaffolding a brand-new unrelated one.',
-    '- Modify project files required to implement the task.',
-    '- Run only safe local verification commands appropriate to the project.',
-    '- Capture stdout, stderr, exit codes, and relevant logs.',
-    '- Save these required artifacts in the implementation-agent workspace using this exact task id:',
-    `  - ${summaryFile}`,
-    `  - ${changedFilesFile}`,
-    `  - ${executionLogFile}`,
-    `  - ${runResultsFile}`,
-    '- Mark the task done only if code changed and execution was attempted successfully.',
-    '- Mark the task failed if execution failed after an attempt.',
-    '- Mark the task needs_approval if blocked by ambiguity, permissions, risky changes, or lack of a safe verification path.',
-    '- Do not deploy, do not run destructive commands, do not modify secrets or env files without explicit authorization.',
-    '',
-    `When complete, update ~/.openclaw/shared/tasks.json for task ${taskId} with accurate status and artifact references.`,
-  ].join('\n');
-}
-
-function buildReviewTriggerMessage(task: Task) {
-  const taskId = String(task.id || '');
-  const context = task.context || {};
-  const dependsOn = String(context.dependsOn || context.upstreamTaskId || '');
-  const runResultsFile = String(context.runResultsFile || '');
-  const changedFilesFile = String(context.changedFilesFile || '');
-  const implementationSummaryFile = String(context.implementationSummaryFile || '');
-
-  return [
-    `Process review task ${taskId} automatically.`,
-    `Task title: ${String(task.title || task.description || taskId)}`,
-    `Implementation task id: ${dependsOn}`,
-    '',
-    'Critical task-selection rules:',
-    `- You must operate on the existing shared task with id ${taskId}.`,
-    `- Do not create a new task. Do not rename the task. Do not switch to a different review task unless ${taskId} is missing from ~/.openclaw/shared/tasks.json.`,
-    `- If ${taskId} exists and is queued, move that exact task to in_progress before reviewing.`,
-    '',
-    'Review inputs:',
-    `- Run results: ${runResultsFile}`,
-    `- Changed files artifact: ${changedFilesFile}`,
-    `- Implementation summary: ${implementationSummaryFile}`,
-    '',
-    'Requirements:',
-    '- Read the implementation summary, changed files, and execution evidence first.',
-    '- Inspect the relevant changed project files before making a judgment.',
-    '- Save review notes in the review-agent workspace with a descriptive filename.',
-    '- Update the exact shared review task with accurate status and outputFiles when complete.',
-    '- If critical problems are found, clearly say changes_requested or failure in the review artifact so downstream routing can send the task to debugger-agent.',
-  ].join('\n');
-}
-
-function buildOpsTriggerMessage(task: Task) {
-  const taskId = String(task.id || '');
-  const context = task.context || {};
-  const upstreamTaskId = String(context.upstreamTaskId || context.derivedFrom || '');
-
-  return [
-    `Process ops task ${taskId} automatically.`,
-    `Task title: ${String(task.title || task.description || taskId)}`,
-    `Upstream review task id: ${upstreamTaskId}`,
-    '',
-    'Critical task-selection rules:',
-    `- You must operate on the existing shared task with id ${taskId}.`,
-    `- Do not create a new task. Do not rename the task. Do not switch to a different ops task unless ${taskId} is missing from ~/.openclaw/shared/tasks.json.`,
-    `- If ${taskId} exists and is queued, move that exact task to in_progress before working.`,
-    '',
-    'Requirements:',
-    '- Read the upstream review artifact and surrounding context first.',
-    '- Inspect operational, runtime, or usage implications of the reviewed implementation.',
-    '- Write a concise ops artifact in the ops-agent workspace.',
-    '- Update the exact shared ops task with accurate status and outputFiles when complete.',
-    '- If real operational issues are found, state them clearly so downstream routing can send the task to debugger-agent.',
-  ].join('\n');
-}
-
-function buildDebuggerTriggerMessage(task: Task) {
-  const taskId = String(task.id || '');
-  const context = task.context || {};
-  return [
-    `Process debugger task ${taskId} automatically.`,
-    `Task title: ${String(task.title || task.description || taskId)}`,
-    '',
-    'Critical task-selection rules:',
-    `- You must operate on the existing shared task with id ${taskId}.`,
-    `- Do not create a new task. Do not rename the task. Do not switch to a different debugger task unless ${taskId} is missing from ~/.openclaw/shared/tasks.json.`,
-    `- If ${taskId} exists and is queued, move that exact task to in_progress before working.`,
-    '',
-    'Available failure context:',
-    `- Derived from: ${String(context.derivedFrom || '')}`,
-    `- Depends on: ${String(context.dependsOn || '')}`,
-    `- Failed command: ${String(context.failedCommand || '')}`,
-    `- Error summary: ${String(context.errorSummary || '')}`,
-    '',
-    'Requirements:',
-    '- Read the failure context and referenced artifacts first.',
-    '- Investigate root cause and produce a concrete fix recommendation.',
-    '- Save a debugger artifact in the debugger-agent workspace.',
-    '- Update the exact shared debugger task with accurate status and outputFiles when complete.',
-  ].join('\n');
-}
-
-async function triggerAgentRun(agentId: string, message: string) {
-  const startedAt = now();
-  try {
-    const child = spawn(
-      'openclaw',
-      ['agent', '--agent', agentId, '--message', message, '--json'],
-      {
-        cwd: '/home/jim/.openclaw/workspace-main/openclaw-dashboard',
-        detached: true,
-        stdio: 'ignore',
-      },
-    );
-    child.unref();
-
-    await appendTriggerLog({
-      startedAt,
-      finishedAt: now(),
-      agentId,
-      message,
-      ok: true,
-      mode: 'detached-background-spawn',
-      note: 'Automation runner dispatched agent trigger asynchronously.',
-    });
-
-    return {
-      ok: true,
-      mode: 'detached-background-spawn',
-    };
-  } catch (error) {
-    const err = error as Error;
-    await appendTriggerLog({
-      startedAt,
-      finishedAt: now(),
-      agentId,
-      message,
-      ok: false,
-      mode: 'detached-background-spawn',
-      error: err.message,
-    });
-    return {
-      ok: false,
-      error: err.message,
-    };
-  }
-}
-
 function isImplementationPlanValid(task: Task) {
   const context = task.context || {};
   const projectWorkspace = String(context.projectWorkspace || '').trim();
@@ -590,32 +415,16 @@ export async function runAutomationSweep() {
         tasks.push(next);
         updateRun('development-default', taskId, 'implementation', 'running', nextId, 'queued');
         appendEvent(buildEvent({ timestamp: now(), event_type: 'implementation_task_created', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: nextId, notes: 'Feature-planner completion triggered implementation-agent.', metadata: { pipeline: 'development-default', upstreamTaskId: taskId } }));
-
-        const triggerMessage = buildImplementationTriggerMessage(next);
-        const triggerResult = await triggerAgentRun('implementation-agent', triggerMessage);
-        if (triggerResult.ok) {
-          appendEvent(buildEvent({
-            timestamp: now(),
-            event_type: 'implementation_execution_started',
-            source_task_id: nextId,
-            source_agent: 'orchestrator',
-            action_taken: 'trigger-implementation-agent-run',
-            created_task_id: null,
-            notes: 'Implementation-agent was triggered automatically for the newly created implementation task.',
-            metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
-          }));
-        } else {
-          appendEvent(buildEvent({
-            timestamp: now(),
-            event_type: 'duplicate_downstream_task_blocked',
-            source_task_id: nextId,
-            source_agent: 'orchestrator',
-            action_taken: 'implementation-agent-trigger-failed',
-            created_task_id: null,
-            notes: `Implementation task was created, but automatic trigger failed: ${triggerResult.error || 'unknown error'}`,
-            metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
-          }));
-        }
+        appendEvent(buildEvent({
+          timestamp: now(),
+          event_type: 'auto_trigger',
+          source_task_id: nextId,
+          source_agent: 'orchestrator',
+          action_taken: 'queue-implementation-agent-for-async-dispatch',
+          created_task_id: null,
+          notes: 'Implementation task queued; will be triggered asynchronously on next sweep to avoid rate limit surge.',
+          metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
+        }));
       }
     }
 
@@ -686,20 +495,16 @@ export async function runAutomationSweep() {
             last_command: lastCommand,
           });
           appendEvent(buildEvent({ timestamp: now(), event_type: 'review_task_created_from_implementation_success', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Implementation completion triggered review-agent.', metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath } }));
-          const reviewTriggerResult = await triggerAgentRun('review-agent', buildReviewTriggerMessage(next));
-          if (reviewTriggerResult.ok) {
-            withTaskHistory(next, 'in_progress', 'Review-agent was auto-triggered for this exact queued review task.');
-            appendEvent(buildEvent({
-              timestamp: now(),
-              event_type: 'auto_trigger',
-              source_task_id: String(next.id),
-              source_agent: 'orchestrator',
-              action_taken: 'trigger-review-agent-run',
-              created_task_id: null,
-              notes: 'Review-agent was triggered automatically after successful implementation routing.',
-              metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath },
-            }));
-          }
+          appendEvent(buildEvent({
+            timestamp: now(),
+            event_type: 'auto_trigger',
+            source_task_id: String(next.id),
+            source_agent: 'orchestrator',
+            action_taken: 'queue-review-agent-for-async-dispatch',
+            created_task_id: null,
+            notes: 'Review task queued; will be triggered asynchronously on next sweep.',
+            metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath },
+          }));
         }
       }
     }
@@ -707,43 +512,22 @@ export async function runAutomationSweep() {
     if (owner === 'review-agent') {
       const pass = hasMarker(outputsJoined, positive) || !hasMarker(outputsJoined, negative);
       const fail = hasMarker(outputsJoined, ['FAIL', 'NEEDS FIX', 'CRITICAL']);
-      const action = 'trigger-review-agent-run';
-      if (!anyEventExists(events, newEvents, taskId, action) && String(task.status || '') === 'queued') {
-        const triggerResult = await triggerAgentRun('review-agent', buildReviewTriggerMessage(task));
-        if (triggerResult.ok) {
-          withTaskHistory(task, 'in_progress', 'Review-agent was auto-triggered for this exact queued review task.');
-          appendEvent(buildEvent({
-            timestamp: now(),
-            event_type: 'auto_trigger',
-            source_task_id: taskId,
-            source_agent: 'orchestrator',
-            action_taken: action,
-            created_task_id: null,
-            notes: 'Review-agent was triggered automatically for the queued review task.',
-            metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || '') },
-          }));
-        }
-      }
       if (fail) {
         const action = 'auto-create-debugger-agent';
         if (!eventExists(events, taskId, action) && !duplicateExists(tasks, 'debugger-agent', taskId, 'development-default')) {
-          const next = createTask({ owner: 'debugger-agent', title: `Debug follow-up for ${taskLabel(task)}`, description: 'Investigate failed review findings and produce a root cause + fix recommendation.', context: { derivedFrom: taskId, dependsOn: taskId, priorOutputs: getNewestOutputFiles(task) }, sourceTaskId: taskId, pipeline: 'development-default' });
+          const next = createTask({ owner: 'debugger-agent', title: `Debug follow-up for ${taskLabel(task)}`, description: 'Investigate failed review findings and produce a root cause + fix recommendation.', context: { derivedFrom: taskId, priorOutputs: getNewestOutputFiles(task) }, sourceTaskId: taskId, pipeline: 'development-default' });
           tasks.push(next); updateRun('development-default', taskId, 'debugging', 'running', String(next.id), 'queued');
           appendEvent(buildEvent({ timestamp: now(), event_type: 'auto_trigger', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Review failure routed to debugger-agent.' }));
-          const debuggerTriggerResult = await triggerAgentRun('debugger-agent', buildDebuggerTriggerMessage(next));
-          if (debuggerTriggerResult.ok) {
-            withTaskHistory(next, 'in_progress', 'Debugger-agent was auto-triggered for this exact queued debugger task.');
-            appendEvent(buildEvent({
-              timestamp: now(),
-              event_type: 'auto_trigger',
-              source_task_id: String(next.id),
-              source_agent: 'orchestrator',
-              action_taken: 'trigger-debugger-agent-run',
-              created_task_id: null,
-              notes: 'Debugger-agent was triggered automatically after review failure routing.',
-              metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
-            }));
-          }
+          appendEvent(buildEvent({
+            timestamp: now(),
+            event_type: 'auto_trigger',
+            source_task_id: String(next.id),
+            source_agent: 'orchestrator',
+            action_taken: 'queue-debugger-agent-for-async-dispatch',
+            created_task_id: null,
+            notes: 'Debugger task queued; will be triggered asynchronously on next sweep.',
+            metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
+          }));
         }
       } else if (pass) {
         const action = 'auto-create-ops-agent';
@@ -751,20 +535,16 @@ export async function runAutomationSweep() {
           const next = createTask({ owner: 'ops-agent', title: `Operational follow-up for ${taskLabel(task)}`, description: 'Inspect operational/usage impact after a successful review.', context: { derivedFrom: taskId, priorOutputs: getNewestOutputFiles(task) }, sourceTaskId: taskId, pipeline: 'development-default' });
           tasks.push(next); updateRun('development-default', taskId, 'operations', 'running', String(next.id), 'queued');
           appendEvent(buildEvent({ timestamp: now(), event_type: 'auto_trigger', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Review pass triggered ops-agent.' }));
-          const opsTriggerResult = await triggerAgentRun('ops-agent', buildOpsTriggerMessage(next));
-          if (opsTriggerResult.ok) {
-            withTaskHistory(next, 'in_progress', 'Ops-agent was auto-triggered for this exact queued ops task.');
-            appendEvent(buildEvent({
-              timestamp: now(),
-              event_type: 'auto_trigger',
-              source_task_id: String(next.id),
-              source_agent: 'orchestrator',
-              action_taken: 'trigger-ops-agent-run',
-              created_task_id: null,
-              notes: 'Ops-agent was triggered automatically after review success routing.',
-              metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
-            }));
-          }
+          appendEvent(buildEvent({
+            timestamp: now(),
+            event_type: 'auto_trigger',
+            source_task_id: String(next.id),
+            source_agent: 'orchestrator',
+            action_taken: 'queue-ops-agent-for-async-dispatch',
+            created_task_id: null,
+            notes: 'Ops task queued; will be triggered asynchronously on next sweep.',
+            metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
+          }));
         }
       }
     }
@@ -891,20 +671,16 @@ export async function runAutomationSweep() {
           last_command: String(failedCommand || ''),
         });
         appendEvent(buildEvent({ timestamp: now(), event_type: 'debugger_task_created_from_implementation_failure', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Implementation failure triggered debugger-agent with failure context.', metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath, failedCommand: String(failedCommand || '') } }));
-        const debuggerTriggerResult = await triggerAgentRun('debugger-agent', buildDebuggerTriggerMessage(next));
-        if (debuggerTriggerResult.ok) {
-          withTaskHistory(next, 'in_progress', 'Debugger-agent was auto-triggered for this exact queued debugger task.');
-          appendEvent(buildEvent({
-            timestamp: now(),
-            event_type: 'auto_trigger',
-            source_task_id: String(next.id),
-            source_agent: 'orchestrator',
-            action_taken: 'trigger-debugger-agent-run',
-            created_task_id: null,
-            notes: 'Debugger-agent was triggered automatically after implementation failure routing.',
-            metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath, failedCommand: String(failedCommand || '') },
-          }));
-        }
+        appendEvent(buildEvent({
+          timestamp: now(),
+          event_type: 'auto_trigger',
+          source_task_id: String(next.id),
+          source_agent: 'orchestrator',
+          action_taken: 'queue-debugger-agent-for-async-dispatch',
+          created_task_id: null,
+          notes: 'Debugger task queued from implementation failure; will be triggered asynchronously on next sweep.',
+          metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath, failedCommand: String(failedCommand || '') },
+        }));
       }
     }
   }
