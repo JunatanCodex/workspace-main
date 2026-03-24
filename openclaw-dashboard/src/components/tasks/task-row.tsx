@@ -11,7 +11,7 @@ export function TaskRow({ task, href, duplicate = false }: { task: TaskRecord; h
   return (
     <Link
       href={href}
-      className={`grid gap-4 rounded-2xl border p-4 transition hover:bg-white/[0.03] lg:grid-cols-[1.8fr_0.9fr_0.8fr_0.8fr] ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : duplicate ? "border-violet-500/20 bg-violet-500/[0.04]" : "border-white/8 bg-zinc-950/80"}`}
+      className={`grid gap-4 rounded-2xl border p-4 transition hover:bg-white/[0.03] md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : duplicate ? "border-violet-500/20 bg-violet-500/[0.04]" : "border-white/8 bg-zinc-950/80"}`}
     >
       <div>
         <div className="font-medium text-zinc-100">{getTaskLabelView(task)}</div>
