@@ -1,8 +1,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { spawn } from "node:child_process";
 import { sharedStore, SharedAutomationRules, SharedEvent, SharedPipelineDef, SharedPipelineRun } from "@/lib/automation/store";
+import { appendTriggerLog } from "@/lib/runtime/trigger-log";
 
 type TaskStatus = 'queued' | 'in_progress' | 'done' | 'failed' | 'needs_approval' | 'blocked' | 'cancelled';
 
@@ -57,7 +57,6 @@ type RunResults = {
 };
 
 const IMPLEMENTATION_WORKSPACE = "/home/jim/.openclaw/agents/implementation-agent";
-const execFileAsync = promisify(execFile);
 
 function now() { return new Date().toISOString(); }
 function taskLabel(task: Task) { return task.title || task.description || task.id || 'Untitled task'; }
@@ -248,29 +247,47 @@ function buildImplementationTriggerMessage(task: Task) {
 }
 
 async function triggerAgentRun(agentId: string, message: string) {
+  const startedAt = now();
   try {
-    const { stdout, stderr } = await execFileAsync(
+    const child = spawn(
       'openclaw',
       ['agent', '--agent', agentId, '--message', message, '--json'],
       {
         cwd: '/home/jim/.openclaw/workspace-main/openclaw-dashboard',
-        timeout: 600_000,
-        maxBuffer: 4 * 1024 * 1024,
+        detached: true,
+        stdio: 'ignore',
       },
     );
+    child.unref();
+
+    await appendTriggerLog({
+      startedAt,
+      finishedAt: now(),
+      agentId,
+      message,
+      ok: true,
+      mode: 'detached-background-spawn',
+      note: 'Automation runner dispatched agent trigger asynchronously.',
+    });
 
     return {
       ok: true,
-      stdout,
-      stderr,
+      mode: 'detached-background-spawn',
     };
   } catch (error) {
-    const err = error as Error & { stdout?: string; stderr?: string };
+    const err = error as Error;
+    await appendTriggerLog({
+      startedAt,
+      finishedAt: now(),
+      agentId,
+      message,
+      ok: false,
+      mode: 'detached-background-spawn',
+      error: err.message,
+    });
     return {
       ok: false,
       error: err.message,
-      stdout: err.stdout,
-      stderr: err.stderr,
     };
   }
 }
