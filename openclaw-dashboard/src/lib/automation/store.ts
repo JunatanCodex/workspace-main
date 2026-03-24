@@ -1,6 +1,12 @@
 import { promises as fs } from "node:fs";
 
-export interface SharedPipelineStep { agent: string; stage_name: string; trigger_on?: string }
+export interface SharedPipelineStep {
+  agent: string;
+  stage_name: string;
+  trigger_on?: string;
+  requires?: Record<string, unknown>;
+  completion_contract?: Record<string, unknown>;
+}
 export interface SharedPipelineDef {
   pipeline_name: string;
   enabled: boolean;
@@ -20,6 +26,13 @@ export interface SharedPipelineRun {
   started_at: string;
   updated_at: string;
   final_status: string;
+  execution?: {
+    attempted?: boolean | null;
+    success?: boolean | null;
+    failed_task_id?: string | null;
+    run_results_file?: string | null;
+    last_command?: string | null;
+  };
 }
 
 export interface SharedEvent {
@@ -30,6 +43,12 @@ export interface SharedEvent {
   action_taken: string;
   created_task_id: string | null;
   notes?: string;
+  metadata?: {
+    pipeline?: string | null;
+    upstreamTaskId?: string | null;
+    runResultsFile?: string | null;
+    failedCommand?: string | null;
+  };
 }
 
 export interface SharedPipelinesDoc {
@@ -41,20 +60,53 @@ export interface SharedPipelinesDoc {
 export interface SharedRunsDoc {
   version?: number;
   updatedAt?: string;
+  schema?: Record<string, unknown>;
   runs?: SharedPipelineRun[];
 }
 
 export interface SharedEventsDoc {
   version?: number;
   updatedAt?: string;
+  schema?: Record<string, unknown>;
   events?: SharedEvent[];
 }
 
 export interface SharedAutomationRules {
   quiet_mode?: { max_active_pipeline_runs?: number; defer_non_critical_seeding_when_exceeded?: boolean };
   output_parsing?: { positive_markers?: string[]; negative_markers?: string[] };
-  duplicate_prevention?: { prevent_same_downstream_stage_for_same_upstream_completion?: boolean; check_recent_similar_tasks?: boolean; recent_window_hours?: number };
+  duplicate_prevention?: {
+    prevent_same_downstream_stage_for_same_upstream_completion?: boolean;
+    check_recent_similar_tasks?: boolean;
+    recent_window_hours?: number;
+    prevent_same_stage_for_same_upstream_plan?: boolean;
+    implementation_duplicate_key?: string[];
+    debugger_duplicate_key?: string[];
+  };
   stalled_task_recovery?: { queued_on_demand_minutes?: number; in_progress_hours?: number; retry_once_if_safe?: boolean; mark_routing_issue_if_invalid_owner?: boolean };
+  execution_policy?: {
+    implementation_agent?: {
+      mode?: string;
+      require_execution_attempt_for_done?: boolean;
+      require_structured_artifacts?: boolean;
+      safe_runner?: string;
+      forbid_background_servers?: boolean;
+      forbid_deployments?: boolean;
+      forbid_destructive_commands?: boolean;
+      forbid_secret_file_modification_without_approval?: boolean;
+    };
+  };
+  implementation_task_creation?: {
+    require_feature_planner_done?: boolean;
+    require_nonterminal_duplicate_check?: boolean;
+    require_upstream_plan_reference?: boolean;
+    require_approved_project_workspace?: boolean;
+    prevent_duplicate_for_same_upstream_plan?: boolean;
+  };
+  routing_conditions?: {
+    implementation_success_requires?: Record<string, unknown>;
+    implementation_failure_requires?: Record<string, unknown>;
+    implementation_approval_pause_requires?: Record<string, unknown>;
+  };
   daily_seeding?: Record<string, boolean>;
   rules?: Record<string, string>;
 }
