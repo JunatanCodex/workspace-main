@@ -29,6 +29,18 @@ function buildTaskId(prefix: string) { return `${prefix}-${Date.now()}`; }
 function getNewestOutputFiles(task: Task): string[] {
   return Array.isArray(task.outputFiles) ? task.outputFiles : [];
 }
+function getTaskSignals(task: Task) {
+  const historyNotes = Array.isArray(task.statusHistory)
+    ? task.statusHistory.map((entry) => `${entry.status}: ${entry.note || ""}`).join("\n")
+    : "";
+
+  return [
+    historyNotes,
+    task.failureReason || "",
+    JSON.stringify(task.context || {}),
+    JSON.stringify(task.outputFiles || []),
+  ].join("\n");
+}
 
 function createTask({ owner, title, description, context, sourceTaskId, pipeline }: { owner: string; title: string; description: string; context: Record<string, unknown>; sourceTaskId: string; pipeline: string; }): Task {
   const id = buildTaskId(`${pipeline}-${safeSlug(owner)}`);
@@ -58,6 +70,11 @@ function duplicateExists(tasks: Task[], owner: string, upstreamTaskId: string, p
 
 function eventExists(events: SharedEvent[], sourceTaskId: string, actionTaken: string) {
   return events.some((event) => event.source_task_id === sourceTaskId && event.action_taken === actionTaken);
+}
+
+function anyEventExists(events: SharedEvent[], newEvents: SharedEvent[], sourceTaskId: string, actionTaken: string) {
+  return eventExists(events, sourceTaskId, actionTaken)
+    || newEvents.some((event) => event.source_task_id === sourceTaskId && event.action_taken === actionTaken);
 }
 
 export async function runAutomationSweep() {
@@ -91,7 +108,7 @@ export async function runAutomationSweep() {
     let run = runs.find((r) => r.pipeline_name === pipelineName && r.source_task_id === sourceTaskId);
     if (!run) {
       run = {
-        run_id: `${pipelineName}-${Date.now()}`,
+        run_id: `${pipelineName}-${safeSlug(sourceTaskId || 'root')}-${Date.now()}`,
         pipeline_name: pipelineName,
         source_task_id: sourceTaskId,
         current_stage: currentStage,
@@ -115,7 +132,7 @@ export async function runAutomationSweep() {
     const owner = String(task.owner || '');
     const taskId = String(task.id || '');
     if (!taskId) continue;
-    const outputsJoined = `${JSON.stringify(task.outputFiles || [])}\n${JSON.stringify(task.context || {})}\n${task.title || ''}\n${task.description || ''}`;
+    const outputsJoined = getTaskSignals(task);
 
     if (owner === 'lead-developer') {
       const action = 'auto-create-feature-planner';
@@ -182,7 +199,7 @@ export async function runAutomationSweep() {
           tasks.push(next); updateRun('development-default', taskId, 'debugging', 'running', String(next.id));
           appendEvent({ timestamp: now(), event_type: 'auto_trigger', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Ops findings triggered debugger-agent.' });
         }
-      } else {
+      } else if (!anyEventExists(events, newEvents, taskId, 'development-pipeline-healthy')) {
         updateRun('development-default', taskId, 'operations', 'healthy');
         appendEvent({ timestamp: now(), event_type: 'pipeline_healthy', source_task_id: taskId, source_agent: owner, action_taken: 'development-pipeline-healthy', created_task_id: null, notes: 'Ops-agent completed without operational issues.' });
       }
@@ -207,7 +224,7 @@ export async function runAutomationSweep() {
           tasks.push(next); updateRun('business-default', taskId, 'fact_checking', 'running', String(next.id));
           appendEvent({ timestamp: now(), event_type: 'auto_trigger', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Validation verdict triggered fact-checker.' });
         }
-      } else if (weak) {
+      } else if (weak && !anyEventExists(events, newEvents, taskId, 'business-pipeline-stopped-after-validation')) {
         updateRun('business-default', taskId, 'validation', 'stopped');
         appendEvent({ timestamp: now(), event_type: 'pipeline_stop', source_task_id: taskId, source_agent: owner, action_taken: 'business-pipeline-stopped-after-validation', created_task_id: null, notes: 'Validation result was weak/skip, so the branch was stopped.' });
       }
@@ -223,13 +240,13 @@ export async function runAutomationSweep() {
           tasks.push(next); updateRun('business-default', taskId, 'offer_creation', 'running', String(next.id));
           appendEvent({ timestamp: now(), event_type: 'auto_trigger', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Fact-check completion triggered freelancing-optimizer.' });
         }
-      } else if (blocked) {
+      } else if (blocked && !anyEventExists(events, newEvents, taskId, 'business-branch-paused-after-fact-check')) {
         updateRun('business-default', taskId, 'fact_checking', 'waiting_approval');
         appendEvent({ timestamp: now(), event_type: 'approval_or_stop', source_task_id: taskId, source_agent: owner, action_taken: 'business-branch-paused-after-fact-check', created_task_id: null, notes: 'Fact-check result was outdated/blocked/incorrect.' });
       }
     }
 
-    if (owner === 'freelancing-optimizer') {
+    if (owner === 'freelancing-optimizer' && !anyEventExists(events, newEvents, taskId, 'business-pipeline-complete')) {
       updateRun('business-default', taskId, 'offer_creation', 'completed');
       appendEvent({ timestamp: now(), event_type: 'pipeline_complete', source_task_id: taskId, source_agent: owner, action_taken: 'business-pipeline-complete', created_task_id: null, notes: 'Freelancing optimizer completed the business branch.' });
     }
