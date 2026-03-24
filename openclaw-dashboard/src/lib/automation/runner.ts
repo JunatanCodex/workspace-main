@@ -36,6 +36,12 @@ type RunResults = {
   success?: boolean;
   needsApproval?: boolean;
   failureRoutingRecommended?: boolean;
+  summary?: {
+    attempted?: boolean;
+    successful?: boolean;
+    testsPassed?: number;
+    testsFailed?: number;
+  };
   commands?: Array<{
     name?: string;
     command?: string;
@@ -317,6 +323,55 @@ function updateTaskOutputFiles(task: Task, outputFiles: string[]) {
   task.outputFiles = Array.from(current);
 }
 
+function deriveExecutionAttempted(runResults: RunResults | null) {
+  return Boolean(runResults?.executionAttempted ?? runResults?.summary?.attempted);
+}
+
+function deriveSuccess(runResults: RunResults | null) {
+  return runResults?.success === true || runResults?.summary?.successful === true || runResults?.status === 'success';
+}
+
+function deriveCodeChanged(task: Task, runResults: RunResults | null) {
+  return runResults?.codeChanged === true
+    || Boolean((task.outputFiles || []).some((file) => String(file).endsWith('-changed-files.json')))
+    || Boolean((task.outputFiles || []).some((file) => !String(file).includes('/workspace/') && !String(file).startsWith('workspace/')))
+    || Boolean(runResults?.artifacts);
+}
+
+function reconcileImplementationTaskFromArtifacts(task: Task, runResults: RunResults | null) {
+  const executionAttempted = deriveExecutionAttempted(runResults);
+  const success = deriveSuccess(runResults);
+  const needsApproval = runResults?.needsApproval === true;
+  const taskStatus = String(task.status || '');
+
+  if (taskStatus === 'done' || taskStatus === 'failed' || taskStatus === 'needs_approval' || taskStatus === 'cancelled') {
+    return;
+  }
+
+  if (needsApproval) {
+    withTaskHistory(task, 'needs_approval', 'Automation sweep reconciled implementation task from run-results artifacts requiring approval.');
+    return;
+  }
+
+  if (executionAttempted && success) {
+    withTaskHistory(task, 'done', 'Automation sweep reconciled implementation task to done from successful execution artifacts.');
+    return;
+  }
+
+  if (executionAttempted && !success) {
+    withTaskHistory(task, 'failed', 'Automation sweep reconciled implementation task to failed from execution artifacts.');
+  }
+}
+
+function withTaskHistory(task: Task, status: TaskStatus | string, note: string) {
+  const timestamp = now();
+  const history = Array.isArray(task.statusHistory) ? task.statusHistory.slice() : [];
+  history.push({ status: String(status), at: timestamp, note });
+  task.status = status;
+  task.updatedAt = timestamp;
+  task.statusHistory = history;
+}
+
 export async function runAutomationSweep() {
   const [tasksRaw, pipelinesDoc, runsDoc, eventsDoc, rules] = await Promise.all([
     sharedStore.readTasks(),
@@ -336,6 +391,20 @@ export async function runAutomationSweep() {
   let changed = false;
 
   const enabledPipelines = new Set(pipelines.filter((pipeline) => pipeline.enabled).map((pipeline) => pipeline.pipeline_name));
+
+  for (const task of tasks) {
+    if (task.owner === 'implementation-agent' && ['queued', 'in_progress'].includes(String(task.status || ''))) {
+      const runResultsRef = await loadRunResults(task);
+      if (runResultsRef.data) {
+        const before = String(task.status || '');
+        reconcileImplementationTaskFromArtifacts(task, runResultsRef.data);
+        if (String(task.status || '') !== before) {
+          changed = true;
+        }
+      }
+    }
+  }
+
   const doneTasks = tasks.filter((task) => task.status === 'done');
   const failedTasks = tasks.filter((task) => task.status === 'failed');
   const approvalTasks = tasks.filter((task) => task.status === 'needs_approval');
@@ -472,9 +541,9 @@ export async function runAutomationSweep() {
       const runResultsRef = await loadRunResults(task);
       const runResults = runResultsRef.data;
       updateTaskOutputFiles(task, implementationArtifactsForTask(taskId));
-      const executionAttempted = Boolean(runResults?.executionAttempted);
-      const success = runResults?.success === true;
-      const codeChanged = runResults?.codeChanged === true;
+      const executionAttempted = deriveExecutionAttempted(runResults);
+      const success = deriveSuccess(runResults);
+      const codeChanged = deriveCodeChanged(task, runResults);
       const hasArtifacts = hasImplementationArtifacts(task, runResults);
       const lastCommand = runResults?.failedCommand?.command || runResults?.commands?.slice(-1)?.[0]?.command || null;
 
