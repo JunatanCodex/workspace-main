@@ -291,6 +291,56 @@ function buildReviewTriggerMessage(task: Task) {
   ].join('\n');
 }
 
+function buildOpsTriggerMessage(task: Task) {
+  const taskId = String(task.id || '');
+  const context = task.context || {};
+  const upstreamTaskId = String(context.upstreamTaskId || context.derivedFrom || '');
+
+  return [
+    `Process ops task ${taskId} automatically.`,
+    `Task title: ${String(task.title || task.description || taskId)}`,
+    `Upstream review task id: ${upstreamTaskId}`,
+    '',
+    'Critical task-selection rules:',
+    `- You must operate on the existing shared task with id ${taskId}.`,
+    `- Do not create a new task. Do not rename the task. Do not switch to a different ops task unless ${taskId} is missing from ~/.openclaw/shared/tasks.json.`,
+    `- If ${taskId} exists and is queued, move that exact task to in_progress before working.`,
+    '',
+    'Requirements:',
+    '- Read the upstream review artifact and surrounding context first.',
+    '- Inspect operational, runtime, or usage implications of the reviewed implementation.',
+    '- Write a concise ops artifact in the ops-agent workspace.',
+    '- Update the exact shared ops task with accurate status and outputFiles when complete.',
+    '- If real operational issues are found, state them clearly so downstream routing can send the task to debugger-agent.',
+  ].join('\n');
+}
+
+function buildDebuggerTriggerMessage(task: Task) {
+  const taskId = String(task.id || '');
+  const context = task.context || {};
+  return [
+    `Process debugger task ${taskId} automatically.`,
+    `Task title: ${String(task.title || task.description || taskId)}`,
+    '',
+    'Critical task-selection rules:',
+    `- You must operate on the existing shared task with id ${taskId}.`,
+    `- Do not create a new task. Do not rename the task. Do not switch to a different debugger task unless ${taskId} is missing from ~/.openclaw/shared/tasks.json.`,
+    `- If ${taskId} exists and is queued, move that exact task to in_progress before working.`,
+    '',
+    'Available failure context:',
+    `- Derived from: ${String(context.derivedFrom || '')}`,
+    `- Depends on: ${String(context.dependsOn || '')}`,
+    `- Failed command: ${String(context.failedCommand || '')}`,
+    `- Error summary: ${String(context.errorSummary || '')}`,
+    '',
+    'Requirements:',
+    '- Read the failure context and referenced artifacts first.',
+    '- Investigate root cause and produce a concrete fix recommendation.',
+    '- Save a debugger artifact in the debugger-agent workspace.',
+    '- Update the exact shared debugger task with accurate status and outputFiles when complete.',
+  ].join('\n');
+}
+
 async function triggerAgentRun(agentId: string, message: string) {
   const startedAt = now();
   try {
@@ -677,9 +727,23 @@ export async function runAutomationSweep() {
       if (fail) {
         const action = 'auto-create-debugger-agent';
         if (!eventExists(events, taskId, action) && !duplicateExists(tasks, 'debugger-agent', taskId, 'development-default')) {
-          const next = createTask({ owner: 'debugger-agent', title: `Debug follow-up for ${taskLabel(task)}`, description: 'Investigate failed review findings and produce a root cause + fix recommendation.', context: { derivedFrom: taskId, priorOutputs: getNewestOutputFiles(task) }, sourceTaskId: taskId, pipeline: 'development-default' });
+          const next = createTask({ owner: 'debugger-agent', title: `Debug follow-up for ${taskLabel(task)}`, description: 'Investigate failed review findings and produce a root cause + fix recommendation.', context: { derivedFrom: taskId, dependsOn: taskId, priorOutputs: getNewestOutputFiles(task) }, sourceTaskId: taskId, pipeline: 'development-default' });
           tasks.push(next); updateRun('development-default', taskId, 'debugging', 'running', String(next.id), 'queued');
           appendEvent(buildEvent({ timestamp: now(), event_type: 'auto_trigger', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Review failure routed to debugger-agent.' }));
+          const debuggerTriggerResult = await triggerAgentRun('debugger-agent', buildDebuggerTriggerMessage(next));
+          if (debuggerTriggerResult.ok) {
+            withTaskHistory(next, 'in_progress', 'Debugger-agent was auto-triggered for this exact queued debugger task.');
+            appendEvent(buildEvent({
+              timestamp: now(),
+              event_type: 'auto_trigger',
+              source_task_id: String(next.id),
+              source_agent: 'orchestrator',
+              action_taken: 'trigger-debugger-agent-run',
+              created_task_id: null,
+              notes: 'Debugger-agent was triggered automatically after review failure routing.',
+              metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
+            }));
+          }
         }
       } else if (pass) {
         const action = 'auto-create-ops-agent';
@@ -687,6 +751,20 @@ export async function runAutomationSweep() {
           const next = createTask({ owner: 'ops-agent', title: `Operational follow-up for ${taskLabel(task)}`, description: 'Inspect operational/usage impact after a successful review.', context: { derivedFrom: taskId, priorOutputs: getNewestOutputFiles(task) }, sourceTaskId: taskId, pipeline: 'development-default' });
           tasks.push(next); updateRun('development-default', taskId, 'operations', 'running', String(next.id), 'queued');
           appendEvent(buildEvent({ timestamp: now(), event_type: 'auto_trigger', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Review pass triggered ops-agent.' }));
+          const opsTriggerResult = await triggerAgentRun('ops-agent', buildOpsTriggerMessage(next));
+          if (opsTriggerResult.ok) {
+            withTaskHistory(next, 'in_progress', 'Ops-agent was auto-triggered for this exact queued ops task.');
+            appendEvent(buildEvent({
+              timestamp: now(),
+              event_type: 'auto_trigger',
+              source_task_id: String(next.id),
+              source_agent: 'orchestrator',
+              action_taken: 'trigger-ops-agent-run',
+              created_task_id: null,
+              notes: 'Ops-agent was triggered automatically after review success routing.',
+              metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
+            }));
+          }
         }
       }
     }
