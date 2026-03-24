@@ -891,6 +891,20 @@ export async function runAutomationSweep() {
           last_command: String(failedCommand || ''),
         });
         appendEvent(buildEvent({ timestamp: now(), event_type: 'debugger_task_created_from_implementation_failure', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Implementation failure triggered debugger-agent with failure context.', metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath, failedCommand: String(failedCommand || '') } }));
+        const debuggerTriggerResult = await triggerAgentRun('debugger-agent', buildDebuggerTriggerMessage(next));
+        if (debuggerTriggerResult.ok) {
+          withTaskHistory(next, 'in_progress', 'Debugger-agent was auto-triggered for this exact queued debugger task.');
+          appendEvent(buildEvent({
+            timestamp: now(),
+            event_type: 'auto_trigger',
+            source_task_id: String(next.id),
+            source_agent: 'orchestrator',
+            action_taken: 'trigger-debugger-agent-run',
+            created_task_id: null,
+            notes: 'Debugger-agent was triggered automatically after implementation failure routing.',
+            metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath, failedCommand: String(failedCommand || '') },
+          }));
+        }
       }
     }
   }
