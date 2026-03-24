@@ -259,6 +259,38 @@ function buildImplementationTriggerMessage(task: Task) {
   ].join('\n');
 }
 
+function buildReviewTriggerMessage(task: Task) {
+  const taskId = String(task.id || '');
+  const context = task.context || {};
+  const dependsOn = String(context.dependsOn || context.upstreamTaskId || '');
+  const runResultsFile = String(context.runResultsFile || '');
+  const changedFilesFile = String(context.changedFilesFile || '');
+  const implementationSummaryFile = String(context.implementationSummaryFile || '');
+
+  return [
+    `Process review task ${taskId} automatically.`,
+    `Task title: ${String(task.title || task.description || taskId)}`,
+    `Implementation task id: ${dependsOn}`,
+    '',
+    'Critical task-selection rules:',
+    `- You must operate on the existing shared task with id ${taskId}.`,
+    `- Do not create a new task. Do not rename the task. Do not switch to a different review task unless ${taskId} is missing from ~/.openclaw/shared/tasks.json.`,
+    `- If ${taskId} exists and is queued, move that exact task to in_progress before reviewing.`,
+    '',
+    'Review inputs:',
+    `- Run results: ${runResultsFile}`,
+    `- Changed files artifact: ${changedFilesFile}`,
+    `- Implementation summary: ${implementationSummaryFile}`,
+    '',
+    'Requirements:',
+    '- Read the implementation summary, changed files, and execution evidence first.',
+    '- Inspect the relevant changed project files before making a judgment.',
+    '- Save review notes in the review-agent workspace with a descriptive filename.',
+    '- Update the exact shared review task with accurate status and outputFiles when complete.',
+    '- If critical problems are found, clearly say changes_requested or failure in the review artifact so downstream routing can send the task to debugger-agent.',
+  ].join('\n');
+}
+
 async function triggerAgentRun(agentId: string, message: string) {
   const startedAt = now();
   try {
@@ -604,6 +636,20 @@ export async function runAutomationSweep() {
             last_command: lastCommand,
           });
           appendEvent(buildEvent({ timestamp: now(), event_type: 'review_task_created_from_implementation_success', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: String(next.id), notes: 'Implementation completion triggered review-agent.', metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath } }));
+          const reviewTriggerResult = await triggerAgentRun('review-agent', buildReviewTriggerMessage(next));
+          if (reviewTriggerResult.ok) {
+            withTaskHistory(next, 'in_progress', 'Review-agent was auto-triggered for this exact queued review task.');
+            appendEvent(buildEvent({
+              timestamp: now(),
+              event_type: 'auto_trigger',
+              source_task_id: String(next.id),
+              source_agent: 'orchestrator',
+              action_taken: 'trigger-review-agent-run',
+              created_task_id: null,
+              notes: 'Review-agent was triggered automatically after successful implementation routing.',
+              metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || ''), runResultsFile: runResultsRef.relativePath },
+            }));
+          }
         }
       }
     }
@@ -611,6 +657,23 @@ export async function runAutomationSweep() {
     if (owner === 'review-agent') {
       const pass = hasMarker(outputsJoined, positive) || !hasMarker(outputsJoined, negative);
       const fail = hasMarker(outputsJoined, ['FAIL', 'NEEDS FIX', 'CRITICAL']);
+      const action = 'trigger-review-agent-run';
+      if (!anyEventExists(events, newEvents, taskId, action) && String(task.status || '') === 'queued') {
+        const triggerResult = await triggerAgentRun('review-agent', buildReviewTriggerMessage(task));
+        if (triggerResult.ok) {
+          withTaskHistory(task, 'in_progress', 'Review-agent was auto-triggered for this exact queued review task.');
+          appendEvent(buildEvent({
+            timestamp: now(),
+            event_type: 'auto_trigger',
+            source_task_id: taskId,
+            source_agent: 'orchestrator',
+            action_taken: action,
+            created_task_id: null,
+            notes: 'Review-agent was triggered automatically for the queued review task.',
+            metadata: { pipeline: 'development-default', upstreamTaskId: String(task.context?.upstreamTaskId || '') },
+          }));
+        }
+      }
       if (fail) {
         const action = 'auto-create-debugger-agent';
         if (!eventExists(events, taskId, action) && !duplicateExists(tasks, 'debugger-agent', taskId, 'development-default')) {
