@@ -1,5 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { sharedStore, SharedAutomationRules, SharedEvent, SharedPipelineDef, SharedPipelineRun } from "@/lib/automation/store";
 
 type TaskStatus = 'queued' | 'in_progress' | 'done' | 'failed' | 'needs_approval' | 'blocked' | 'cancelled';
@@ -55,6 +57,7 @@ type RunResults = {
 };
 
 const IMPLEMENTATION_WORKSPACE = "/home/jim/.openclaw/agents/implementation-agent";
+const execFileAsync = promisify(execFile);
 
 function now() { return new Date().toISOString(); }
 function taskLabel(task: Task) { return task.title || task.description || task.id || 'Untitled task'; }
@@ -206,6 +209,72 @@ function inferPlanArtifact(task: Task) {
   return outputs.find((file) => /(plan|breakdown|spec)/i.test(file)) || outputs[0] || null;
 }
 
+function buildImplementationTriggerMessage(task: Task) {
+  const taskId = String(task.id || '');
+  const context = task.context || {};
+  const planArtifact = String(context.planArtifact || '');
+  const projectWorkspace = String(context.projectWorkspace || '');
+  const upstreamTaskId = String(context.upstreamTaskId || context.dependsOn || '');
+  const summaryFile = artifactPath(taskId, 'implementation-summary.md');
+  const changedFilesFile = artifactPath(taskId, 'changed-files.json');
+  const executionLogFile = artifactPath(taskId, 'execution-log.txt');
+  const runResultsFile = artifactPath(taskId, 'run-results.json');
+
+  return [
+    `Process implementation task ${taskId} automatically.`,
+    `Task title: ${String(task.title || task.description || taskId)}`,
+    `Approved project workspace: ${projectWorkspace}`,
+    `Upstream plan task id: ${upstreamTaskId}`,
+    `Plan artifact: ${planArtifact}`,
+    '',
+    'Requirements:',
+    '- Read the approved plan and upstream context first.',
+    '- Work only inside the approved project workspace.',
+    '- Modify project files required to implement the task.',
+    '- Run only safe local verification commands appropriate to the project.',
+    '- Capture stdout, stderr, exit codes, and relevant logs.',
+    '- Save these required artifacts in the implementation-agent workspace:',
+    `  - ${summaryFile}`,
+    `  - ${changedFilesFile}`,
+    `  - ${executionLogFile}`,
+    `  - ${runResultsFile}`,
+    '- Mark the task done only if code changed and execution was attempted successfully.',
+    '- Mark the task failed if execution failed after an attempt.',
+    '- Mark the task needs_approval if blocked by ambiguity, permissions, risky changes, or lack of a safe verification path.',
+    '- Do not deploy, do not run destructive commands, do not modify secrets or env files without explicit authorization.',
+    '',
+    'When complete, update ~/.openclaw/shared/tasks.json with accurate status and artifact references.',
+  ].join('\n');
+}
+
+async function triggerAgentRun(agentId: string, message: string) {
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      'openclaw',
+      ['agent', '--agent', agentId, '--message', message, '--json'],
+      {
+        cwd: '/home/jim/.openclaw/workspace-main/openclaw-dashboard',
+        timeout: 600_000,
+        maxBuffer: 4 * 1024 * 1024,
+      },
+    );
+
+    return {
+      ok: true,
+      stdout,
+      stderr,
+    };
+  } catch (error) {
+    const err = error as Error & { stdout?: string; stderr?: string };
+    return {
+      ok: false,
+      error: err.message,
+      stdout: err.stdout,
+      stderr: err.stderr,
+    };
+  }
+}
+
 function isImplementationPlanValid(task: Task) {
   const context = task.context || {};
   const projectWorkspace = String(context.projectWorkspace || '').trim();
@@ -346,6 +415,32 @@ export async function runAutomationSweep() {
         tasks.push(next);
         updateRun('development-default', taskId, 'implementation', 'running', nextId, 'queued');
         appendEvent(buildEvent({ timestamp: now(), event_type: 'implementation_task_created', source_task_id: taskId, source_agent: owner, action_taken: action, created_task_id: nextId, notes: 'Feature-planner completion triggered implementation-agent.', metadata: { pipeline: 'development-default', upstreamTaskId: taskId } }));
+
+        const triggerMessage = buildImplementationTriggerMessage(next);
+        const triggerResult = await triggerAgentRun('implementation-agent', triggerMessage);
+        if (triggerResult.ok) {
+          appendEvent(buildEvent({
+            timestamp: now(),
+            event_type: 'implementation_execution_started',
+            source_task_id: nextId,
+            source_agent: 'orchestrator',
+            action_taken: 'trigger-implementation-agent-run',
+            created_task_id: null,
+            notes: 'Implementation-agent was triggered automatically for the newly created implementation task.',
+            metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
+          }));
+        } else {
+          appendEvent(buildEvent({
+            timestamp: now(),
+            event_type: 'duplicate_downstream_task_blocked',
+            source_task_id: nextId,
+            source_agent: 'orchestrator',
+            action_taken: 'implementation-agent-trigger-failed',
+            created_task_id: null,
+            notes: `Implementation task was created, but automatic trigger failed: ${triggerResult.error || 'unknown error'}`,
+            metadata: { pipeline: 'development-default', upstreamTaskId: taskId },
+          }));
+        }
       }
     }
 
