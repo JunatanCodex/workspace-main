@@ -26,6 +26,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     { label: "Developer Pipeline", href: "/developer-pipeline", kind: "page" },
     { label: "Pipelines", href: "/pipelines", kind: "page" },
     { label: "Alerts", href: "/alerts", kind: "page" },
+    { label: "Maintenance", href: "/maintenance", kind: "page" },
     { label: "Outputs", href: "/outputs", kind: "page" },
     { label: "Manual Control", href: "/actions", kind: "action" },
     { label: "CLI Control", href: "/cli", kind: "page" },

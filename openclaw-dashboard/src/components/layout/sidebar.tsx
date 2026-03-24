@@ -8,6 +8,7 @@ const nav = [
   ["Developer Pipeline", "/developer-pipeline"],
   ["Pipelines", "/pipelines"],
   ["Digest", "/digest"],
+  ["Maintenance", "/maintenance"],
   ["Routing", "/routing"],
   ["Alerts", "/alerts"],
   ["History", "/history"],
