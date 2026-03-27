@@ -26,7 +26,7 @@ export default async function DiscordBotsPage() {
     <PageShell
       title="Discord Bots"
       description="Deployment, monitoring, incidents, and operational controls for Discord bots managed by the discord-bot-ops specialist."
-      actions={<><MonitorBotsButton /><Link href="/discord-bots/deploy" className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 hover:bg-white/[0.06]">Deploy bot</Link></>}
+      actions={<><MonitorBotsButton /><Link href="/discord-bots/deploy" className="inline-flex rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 transition duration-150 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white hover:shadow-[0_10px_30px_rgba(255,255,255,0.05)]">Deploy bot</Link></>}
     >
       <div className="mb-6">
         <MetricsPanels deployments={deployments.length} incidents={incidents.length} healthy={bots.filter((b) => b.status === 'healthy').length} attention={bots.filter((b) => ['failed', 'degraded'].includes(String(b.status))).length} />

@@ -1,5 +1,7 @@
 "use client";
 
+import { GhostButton } from "@/components/ui/button-link";
+
 export function ExportButton() {
   async function run() {
     const response = await fetch('/api/discord-bots/export');
@@ -13,5 +15,5 @@ export function ExportButton() {
     URL.revokeObjectURL(url);
   }
 
-  return <button onClick={run} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300">Download export</button>;
+  return <GhostButton onClick={run}>Download export</GhostButton>;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { GhostButton } from "@/components/ui/button-link";
 
 export function FleetActions() {
   const [message, setMessage] = useState("");
@@ -21,8 +22,8 @@ export function FleetActions() {
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <button onClick={() => run("monitor")} disabled={pending !== null} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 disabled:opacity-50">Run fleet monitor</button>
-      <button onClick={() => run("restart-degraded")} disabled={pending !== null} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 disabled:opacity-50">Restart degraded bots</button>
+      <GhostButton onClick={() => run("monitor")} disabled={pending !== null}>Run fleet monitor</GhostButton>
+      <GhostButton onClick={() => run("restart-degraded")} disabled={pending !== null}>Restart degraded bots</GhostButton>
       {message ? <div className="text-sm text-zinc-400">{message}</div> : null}
     </div>
   );
