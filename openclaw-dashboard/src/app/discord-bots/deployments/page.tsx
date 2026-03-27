@@ -1,4 +1,5 @@
 import { PageShell } from "@/components/layout/page-shell";
+import { PremiumKicker, PremiumPanel } from "@/components/ui/premium";
 import { getDiscordDeployments } from "@/lib/discord-bots/store";
 
 export default async function DiscordBotDeploymentsPage() {
@@ -6,9 +7,10 @@ export default async function DiscordBotDeploymentsPage() {
   return (
     <PageShell title="Deployments History" description="Recorded deployment attempts, statuses, summaries, and rollback markers.">
       <div className="space-y-3">
-        {deployments.length === 0 ? <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 text-zinc-400">No deployments recorded yet.</div> : null}
+        {deployments.length === 0 ? <PremiumPanel className="text-zinc-400">No deployments recorded yet.</PremiumPanel> : null}
         {deployments.map((item) => (
-          <div key={item.deployment_id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
+          <PremiumPanel key={item.deployment_id}>
+            <PremiumKicker>Deployment record</PremiumKicker>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-medium text-zinc-100">{item.bot_id}</div>
@@ -23,7 +25,7 @@ export default async function DiscordBotDeploymentsPage() {
               <div>Commit: {item.commit || "—"}</div>
             </div>
             {item.summary ? <div className="mt-3 text-sm text-zinc-300">{item.summary}</div> : null}
-          </div>
+          </PremiumPanel>
         ))}
       </div>
     </PageShell>

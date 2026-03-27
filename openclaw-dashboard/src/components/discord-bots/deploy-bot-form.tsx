@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PremiumPanel, PremiumKicker } from "@/components/ui/premium";
 import { DISCORD_BOT_TEMPLATES } from "@/lib/discord-bots/templates";
 
 export function DeployBotForm() {
@@ -61,11 +62,10 @@ export function DeployBotForm() {
   }
 
   return (
-    <form
-      action={async (formData) => submit(formData)}
-      className="grid gap-4 rounded-2xl border border-white/8 bg-white/[0.03] p-5"
-    >
-      <div className="grid gap-4 md:grid-cols-2">
+    <form action={async (formData) => submit(formData)} className="space-y-6">
+      <PremiumPanel>
+        <PremiumKicker>Template & identity</PremiumKicker>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
         <label className="grid gap-2 text-sm text-zinc-300">
           <span>Template</span>
           <select
@@ -107,9 +107,12 @@ export function DeployBotForm() {
             <option value="manual">manual</option>
           </select>
         </label>
-      </div>
+        </div>
+      </PremiumPanel>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <PremiumPanel>
+        <PremiumKicker>Commands</PremiumKicker>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
         {[
           ["install", "Install command", template.commands.install],
           ["build", "Build command", template.commands.build],
@@ -121,9 +124,12 @@ export function DeployBotForm() {
             <input name={String(name)} defaultValue={String(value)} className="rounded-xl border border-white/10 bg-[#0c0c12] px-3 py-2" required />
           </label>
         ))}
-      </div>
+        </div>
+      </PremiumPanel>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <PremiumPanel>
+        <PremiumKicker>Secrets & env</PremiumKicker>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
         <label className="grid gap-2 text-sm text-zinc-300">
           <span>Discord token</span>
           <input name="discordToken" type="password" className="rounded-xl border border-white/10 bg-[#0c0c12] px-3 py-2" />
@@ -136,22 +142,24 @@ export function DeployBotForm() {
           <span>Guild ID</span>
           <input name="guildId" type="password" className="rounded-xl border border-white/10 bg-[#0c0c12] px-3 py-2" />
         </label>
-      </div>
+        </div>
 
-      <label className="grid gap-2 text-sm text-zinc-300">
+        <label className="mt-4 grid gap-2 text-sm text-zinc-300">
         <span>Additional env vars</span>
         <textarea name="additional_env" rows={4} placeholder="KEY=value" className="rounded-xl border border-white/10 bg-[#0c0c12] px-3 py-2" />
       </label>
 
-      <div className="flex flex-wrap gap-5 text-sm text-zinc-300">
+        <div className="mt-4 flex flex-wrap gap-5 text-sm text-zinc-300">
         <label className="flex items-center gap-2"><input type="checkbox" name="autoFixEnabled" defaultChecked /> Auto-fix enabled</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="rollbackEnabled" defaultChecked /> Rollback enabled</label>
       </div>
 
-      <div className="flex items-center gap-3">
+      </PremiumPanel>
+
+      <PremiumPanel className="flex items-center gap-3">
         <button disabled={pending} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? "Submitting..." : "Register bot"}</button>
         {message ? <div className="text-sm text-zinc-400">{message}</div> : null}
-      </div>
+      </PremiumPanel>
     </form>
   );
 }

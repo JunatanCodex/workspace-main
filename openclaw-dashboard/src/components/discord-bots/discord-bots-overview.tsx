@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLiveJson } from "@/hooks/use-live-json";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { PremiumMetric, PremiumPanel } from "@/components/ui/premium";
 
 type ApiShape = {
   bots: Array<{
@@ -33,20 +34,17 @@ export function DiscordBotsOverview({ initial }: { initial: ApiShape }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-4">
-        {[
-          ["Registered bots", String(bots.length)],
-          ["Healthy", String(healthy)],
-          ["Degraded", String(degraded)],
-          ["Failed", String(failed)],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">{label}</div>
-            <div className="mt-3 text-3xl font-semibold text-zinc-50">{value}</div>
-          </div>
-        ))}
+        <PremiumMetric label="Registered bots" value={bots.length} subtext="Tracked in the bot registry" />
+        <PremiumMetric label="Healthy" value={healthy} subtext="Stable runtime state" />
+        <PremiumMetric label="Degraded" value={degraded} subtext="Needs attention soon" />
+        <PremiumMetric label="Failed" value={failed} subtext="Operator action likely needed" />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/8 bg-[#09090c]">
+      <PremiumPanel className="overflow-hidden p-0">
+        <div className="border-b border-white/6 bg-white/[0.02] px-5 py-4">
+          <div className="text-sm font-medium text-zinc-100">Bot fleet overview</div>
+          <div className="mt-1 text-sm text-zinc-400">Status, repo metadata, deployment recency, and health score in one place.</div>
+        </div>
         <table className="min-w-full divide-y divide-white/6 text-sm">
           <thead className="bg-white/[0.03] text-left text-zinc-400">
             <tr>
@@ -77,7 +75,7 @@ export function DiscordBotsOverview({ initial }: { initial: ApiShape }) {
             ) : null}
           </tbody>
         </table>
-      </div>
+      </PremiumPanel>
     </div>
   );
 }
