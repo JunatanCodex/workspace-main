@@ -23,7 +23,7 @@ export function TaskCard({ task, href, onDragStart }: { task: TaskRecord; href: 
           <Link href={href} className="block break-words font-medium text-zinc-100 hover:text-white">{getTaskLabelView(task)}</Link>
           <div className="mt-1 text-xs text-zinc-500 break-all">{taskId || '—'}</div>
         </div>
-        <div className="max-w-[45%] shrink-0 text-right">
+        <div className="ml-auto max-w-[50%] shrink-0 text-right overflow-hidden">
           <StatusBadge value={task.status || 'queued'} />
         </div>
       </div>

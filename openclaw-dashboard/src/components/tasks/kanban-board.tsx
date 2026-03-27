@@ -72,7 +72,7 @@ export function KanbanBoard({ initialTasks, filteredTasks }: { initialTasks: Tas
                       <div className="text-sm font-semibold">{column.label}</div>
                       <div className="mt-1 text-[11px] opacity-80">{column.hint}</div>
                     </div>
-                    <div className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs text-white/80">{count} WIP</div>
+                    <div className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] whitespace-nowrap text-white/80">{count} WIP</div>
                   </div>
                 </div>
                 <div className="space-y-3">

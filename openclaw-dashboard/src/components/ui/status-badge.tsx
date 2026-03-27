@@ -28,5 +28,5 @@ const statusClasses: Record<string, string> = {
 export function StatusBadge({ value }: { value: AgentHealth | TaskStatus | TriggerType }) {
   const key = String(value);
   const classes = statusClasses[key] || statusClasses.unknown;
-  return <span className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide break-words whitespace-normal ${classes}`}>{key.replace(/_/g, " ")}</span>;
+  return <span className={`inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide whitespace-nowrap ${classes}`}>{key.replace(/_/g, " ")}</span>;
 }
