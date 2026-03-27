@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/page-shell";
-import { LiveConsole } from "@/components/discord-bots/live-console";
+import { StreamingConsole } from "@/components/discord-bots/streaming-console";
 import { PremiumKicker, PremiumPanel } from "@/components/ui/premium";
 import { getDiscordBotById } from "@/lib/discord-bots/store";
 import { getBotConsoleLines } from "@/lib/discord-bots/runtime/service";
@@ -17,7 +17,7 @@ export default async function DiscordBotConsolePage({ params }: { params: Promis
         <PremiumKicker>Console</PremiumKicker>
         <div className="mt-2 text-sm text-zinc-400">Recent runtime log lines for {bot.name}.</div>
         <div className="mt-4">
-          <LiveConsole botId={bot.bot_id} initialLines={lines.length ? lines : [`bot_id=${bot.bot_id}`, `status=${bot.status}`, "No runtime logs yet."]} />
+          <StreamingConsole botId={bot.bot_id} initialLines={lines.length ? lines : [`bot_id=${bot.bot_id}`, `status=${bot.status}`, "No runtime logs yet."]} />
         </div>
       </PremiumPanel>
     </PageShell>

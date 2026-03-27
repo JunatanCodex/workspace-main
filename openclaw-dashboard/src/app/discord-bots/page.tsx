@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { BulkActions } from "@/components/discord-bots/bulk-actions";
 import { DiscordBotsOverview } from "@/components/discord-bots/discord-bots-overview";
+import { ExportButton } from "@/components/discord-bots/export-button";
 import { FleetActions } from "@/components/discord-bots/fleet-actions";
 import { MetricsPanels } from "@/components/discord-bots/metrics-panels";
 import { MonitorBotsButton } from "@/components/discord-bots/monitor-bots-button";
@@ -29,7 +30,7 @@ export default async function DiscordBotsPage() {
       <PremiumPanel className="mb-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FleetActions />
-          <ReencryptSecretsButton />
+          <div className="flex flex-wrap items-center gap-3"><ReencryptSecretsButton /><ExportButton /></div>
         </div>
         <BulkActions botIds={bots.map((b) => b.bot_id)} />
       </PremiumPanel>
