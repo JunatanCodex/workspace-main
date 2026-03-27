@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/ui/section-header";
+import { QueueHygienePanel } from "@/components/tasks/queue-hygiene-panel";
 import { getTasks } from "@/lib/fs/tasks";
+import { isStaleApproval } from "@/lib/fs/task-hygiene";
 import { hoursSince } from "@/lib/utils/time";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
 
@@ -19,6 +21,8 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
 
   const tasks = await getTasks();
   const owners = Array.from(new Set(tasks.map((task) => task.owner).filter(Boolean))) as string[];
+  const staleApprovalCount = tasks.filter((task) => isStaleApproval(task)).length;
+
   const filtered = tasks.filter((task) => {
     const matchesStatus = statusFilter === "all" || String(task.status || "queued") === statusFilter;
     const matchesOwner = ownerFilter === "all" || String(task.owner || "") === ownerFilter;
@@ -35,6 +39,8 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
 
   return (
     <PageShell title="Task queue" description="A Kanban-style shared agent queue: searchable, filterable, draggable, and live updated." actions={<Link href="/tasks/archived" className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 hover:bg-white/[0.06]">Archived tasks</Link>}>
+      <QueueHygienePanel staleApprovalCount={staleApprovalCount} />
+
       <section className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
         <SectionHeader title="Filters" description="Search and refine the shared task queue by status, agent, and recency." />
         <form className="grid gap-3 md:grid-cols-[1fr_220px_220px_220px_auto]">
