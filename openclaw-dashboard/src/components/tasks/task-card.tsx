@@ -19,11 +19,13 @@ export function TaskCard({ task, href, onDragStart }: { task: TaskRecord; href: 
       className={`rounded-2xl border p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.01)] transition hover:-translate-y-0.5 hover:bg-white/[0.03] cursor-grab active:cursor-grabbing ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : "border-white/8 bg-zinc-950/80"}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <Link href={href} className="font-medium text-zinc-100 hover:text-white">{getTaskLabelView(task)}</Link>
-          <div className="mt-1 text-xs text-zinc-500">{taskId || '—'}</div>
+        <div className="min-w-0 flex-1">
+          <Link href={href} className="block break-words font-medium text-zinc-100 hover:text-white">{getTaskLabelView(task)}</Link>
+          <div className="mt-1 text-xs text-zinc-500 break-all">{taskId || '—'}</div>
         </div>
-        <StatusBadge value={task.status || 'queued'} />
+        <div className="max-w-[45%] shrink-0 text-right">
+          <StatusBadge value={task.status || 'queued'} />
+        </div>
       </div>
       <div className="mt-3 text-sm text-zinc-400">{task.owner || 'Unassigned'}</div>
       <div className="mt-3 flex flex-wrap gap-2">
