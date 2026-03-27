@@ -23,6 +23,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     { label: "Agents", href: "/agents", kind: "page" },
     { label: "Tasks", href: "/tasks", kind: "page" },
     { label: "Discord Bots", href: "/discord-bots", kind: "page" },
+    { label: "Discord Bot Metrics", href: "/discord-bots/metrics", kind: "page" },
     { label: "Discord Bot Audit", href: "/discord-bots/audit", kind: "page" },
     { label: "Business Pipeline", href: "/business-pipeline", kind: "page" },
     { label: "Developer Pipeline", href: "/developer-pipeline", kind: "page" },
