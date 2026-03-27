@@ -10,6 +10,7 @@ import {
   getDiscordDeployments,
   getDiscordIncidents,
   getDiscordHealthReport,
+  resolveDiscordIncidents,
   saveDiscordBotRegistry,
   saveDiscordDeployment,
   saveDiscordHealthReport,
@@ -23,6 +24,7 @@ import { appendAudit } from "./audit";
 import { buildOperationPlan, ensureBotPathWithinWorkspace, type SafeOperation } from "./policy";
 import { getRetryDecision, markFailure, markSuccess } from "./retries";
 import { getBotServiceStatus, restartBotService, startBotService, stopBotService, writeBotService } from "./supervisor";
+import { acquireBotLock, releaseBotLock } from "./locks";
 
 const execFileAsync = promisify(execFile);
 const BOT_OPS_ROOT = path.join(AGENTS_ROOT, "discord-bot-ops");
@@ -153,125 +155,160 @@ async function updateDigestWithDiscordBots() {
 }
 
 export async function runBotAction(botId: string, action: string) {
-  const [registry, secrets] = await Promise.all([getDiscordBotRegistry(), getDiscordBotSecrets()]);
-  const bot = registry.find((item) => item.bot_id === botId);
-  if (!bot) throw new Error(`Bot not found: ${botId}`);
+  let deployment: DiscordDeploymentRecord | null = null;
+  let lockHeld = false;
+  let currentCommit: string | null = null;
 
-  const retry = await getRetryDecision(botId);
-  if (retry.blocked && ["restart", "redeploy", "rollback", "deploy"].includes(action)) {
-    const reason = retry.cooldownUntil ? `Auto-fix cooldown active until ${retry.cooldownUntil}.` : `Retry limit reached (${retry.maxRetries}).`;
-    await appendAudit({ kind: "discord-bot-action-blocked", botId, action, reason });
-    return { ok: false, error: reason };
-  }
+  try {
+    await appendAudit({ kind: "discord-bot-run-requested", botId, action });
+    const [registry, secrets] = await Promise.all([getDiscordBotRegistry(), getDiscordBotSecrets()]);
+    const bot = registry.find((item) => item.bot_id === botId);
+    if (!bot) throw new Error(`Bot not found: ${botId}`);
 
-  const { botRoot, workDir } = await ensureBotPaths(bot);
-  const secretRecord = secrets[botId] || {};
-  const env = makeEnv({
-    DISCORD_TOKEN: secretRecord.DISCORD_TOKEN,
-    CLIENT_ID: secretRecord.CLIENT_ID,
-    GUILD_ID: secretRecord.GUILD_ID,
-    ...(secretRecord.additional_env || {}),
-  });
-
-  const deployment_id = `deployment-${botId}-${Date.now()}`;
-  const deployment: DiscordDeploymentRecord = {
-    deployment_id,
-    bot_id: botId,
-    repo_url: bot.repo_url,
-    branch: bot.branch,
-    commit: bot.current_commit || null,
-    started_at: new Date().toISOString(),
-    finished_at: null,
-    status: "in_progress",
-    validation_result: "pending",
-    rollback_available: Boolean(bot.previous_healthy_commit),
-    summary: `${action} action started.`,
-    artifacts: [botRoot, workDir],
-  };
-  await saveDiscordDeployment(deployment);
-  await appendAudit({ kind: "discord-bot-action-started", botId, action, deployment_id });
-
-  const operations = buildOperationPlan(bot, action);
-  let failedOutput = "";
-  let currentCommit: string | null = bot.current_commit || null;
-
-  for (const op of operations) {
-    await appendBotLog(botId, "info", "Running operation", { action, op });
-    const result = await executeOperation(bot, op, botRoot, env);
-    await appendAudit({ kind: "discord-bot-operation", botId, action, deployment_id, op, ok: result.ok, stderr: result.stderr?.slice(0, 500), stdout: result.stdout?.slice(0, 500) });
-    if (!result.ok) {
-      failedOutput = `${result.error || "Operation failed"}\n${result.stderr || result.stdout}`.trim();
-      await appendBotLog(botId, "error", "Operation failed", { action, op, error: result.error, stderr: result.stderr });
-      break;
+    const retry = await getRetryDecision(botId);
+    if (retry.blocked && ["restart", "redeploy", "rollback", "deploy"].includes(action)) {
+      const reason = retry.cooldownUntil ? `Auto-fix cooldown active until ${retry.cooldownUntil}.` : `Retry limit reached (${retry.maxRetries}).`;
+      await appendAudit({ kind: "discord-bot-action-blocked", botId, action, reason });
+      return { ok: false, error: reason };
     }
-    if (op.kind === "git-rev-parse") currentCommit = (result.stdout || "").trim() || currentCommit;
-  }
 
-  if (failedOutput) {
-    const incident = await createIncident(botId, failedOutput, [action], true);
-    await markFailure(botId);
-    await appendFixAttempt(botId, action, false, incident.human_summary);
-    await updateBot(botId, (current) => ({
+    const lock = await acquireBotLock(botId, action);
+    if (!lock.ok) {
+      await appendAudit({ kind: "discord-bot-lock-blocked", botId, action, reason: lock.reason });
+      return { ok: false, error: lock.reason || "Another action is already running for this bot." };
+    }
+    lockHeld = true;
+    await appendAudit({ kind: "discord-bot-lock-acquired", botId, action });
+
+    const { botRoot, workDir } = await ensureBotPaths(bot);
+    const secretRecord = secrets[botId] || {};
+    const env = makeEnv({
+      DISCORD_TOKEN: secretRecord.DISCORD_TOKEN,
+      CLIENT_ID: secretRecord.CLIENT_ID,
+      GUILD_ID: secretRecord.GUILD_ID,
+      ...(secretRecord.additional_env || {}),
+    });
+
+    const deployment_id = `deployment-${botId}-${Date.now()}`;
+    deployment = {
+      deployment_id,
+      bot_id: botId,
+      repo_url: bot.repo_url,
+      branch: bot.branch,
+      commit: bot.current_commit || null,
+      started_at: new Date().toISOString(),
+      finished_at: null,
+      status: "in_progress",
+      validation_result: "pending",
+      rollback_available: Boolean(bot.previous_healthy_commit),
+      summary: `${action} action started.`,
+      artifacts: [botRoot, workDir],
+    };
+    await saveDiscordDeployment(deployment);
+    await appendAudit({ kind: "discord-bot-action-started", botId, action, deployment_id });
+
+    const operations = buildOperationPlan(bot, action);
+    await appendAudit({ kind: "discord-bot-plan-built", botId, action, deployment_id, steps: operations.map((op) => op.kind) });
+
+    let failedOutput = "";
+    currentCommit = bot.current_commit || null;
+
+    for (const op of operations) {
+      await appendAudit({ kind: "discord-bot-operation-start", botId, action, deployment_id, op });
+      await appendBotLog(botId, "info", "Running operation", { action, op });
+      const result = await executeOperation(bot, op, botRoot, env);
+      await appendAudit({ kind: "discord-bot-operation", botId, action, deployment_id, op, ok: result.ok, stderr: result.stderr?.slice(0, 500), stdout: result.stdout?.slice(0, 500) });
+      if (!result.ok) {
+        failedOutput = `${result.error || "Operation failed"}\n${result.stderr || result.stdout}`.trim();
+        await appendBotLog(botId, "error", "Operation failed", { action, op, error: result.error, stderr: result.stderr });
+        break;
+      }
+      if (op.kind === "git-rev-parse") currentCommit = (result.stdout || "").trim() || currentCommit;
+    }
+
+    if (failedOutput) {
+      const incident = await createIncident(botId, failedOutput, [action], true);
+      await markFailure(botId);
+      await appendFixAttempt(botId, action, false, incident.human_summary);
+      await updateBot(botId, (current) => ({
+        ...current,
+        status: "failed",
+        health_score: Math.max(0, current.health_score - 20),
+        last_incident_id: incident.incident_id,
+        last_deployment_id: deployment_id,
+        updated_at: new Date().toISOString(),
+      }));
+      await saveDiscordDeployment({ ...deployment, finished_at: new Date().toISOString(), status: "failed", validation_result: "failed", summary: incident.human_summary, commit: currentCommit });
+      await writeSummaries();
+      await updateDigestWithDiscordBots();
+      await appendAudit({ kind: "discord-bot-action-failed", botId, action, deployment_id, incident_id: incident.incident_id });
+      return { ok: false, deployment_id, incident_id: incident.incident_id, error: incident.human_summary };
+    }
+
+    if (["deploy", "redeploy", "start", "restart", "rollback"].includes(action)) {
+      if (action === "restart") {
+        await writeBotService(bot, botRoot, env);
+        await restartBotService(botId);
+      }
+      const service = await getBotServiceStatus(botId);
+      await appendAudit({ kind: "discord-bot-service-status", botId, action, deployment_id, active: service.active });
+      if (!service.active) {
+        const incident = await createIncident(botId, service.text || "Service failed to become active after action.", [action], true);
+        await markFailure(botId);
+        await saveDiscordDeployment({ ...deployment, finished_at: new Date().toISOString(), status: "failed", validation_result: "service_not_active", summary: incident.human_summary, commit: currentCommit });
+        await appendAudit({ kind: "discord-bot-service-gate-failed", botId, action, deployment_id, incident_id: incident.incident_id });
+        return { ok: false, deployment_id, incident_id: incident.incident_id, error: incident.human_summary };
+      }
+    }
+
+    const activeService = ["deploy", "redeploy", "start", "restart", "rollback"].includes(action) ? await getBotServiceStatus(botId) : { active: false, text: "" };
+    await markRuntimeOk(bot);
+    const health = await inferBotHealth(bot, BOT_WORKSPACE_ROOT, { serviceActive: activeService.active });
+    const updatedBot = await updateBot(botId, (current) => ({
       ...current,
-      status: "failed",
-      health_score: Math.max(0, current.health_score - 20),
-      last_incident_id: incident.incident_id,
+      status: action === "stop" ? "stopped" : health.status,
+      health_score: health.health_score,
+      last_deployed_at: ["deploy", "redeploy", "rollback"].includes(action) ? new Date().toISOString() : current.last_deployed_at,
+      last_healthy_at: action === "stop" ? current.last_healthy_at : (health.status === "healthy" || activeService.active) ? new Date().toISOString() : current.last_healthy_at,
+      current_commit: currentCommit,
+      previous_healthy_commit: (health.status === "healthy" || activeService.active) ? (current.current_commit || current.previous_healthy_commit) : current.previous_healthy_commit,
+      restart_count: ["restart", "redeploy", "rollback", "deploy", "start"].includes(action) ? current.restart_count + 1 : current.restart_count,
+      last_incident_id: (health.status === "healthy" || activeService.active) ? null : current.last_incident_id,
       last_deployment_id: deployment_id,
       updated_at: new Date().toISOString(),
     }));
-    await saveDiscordDeployment({ ...deployment, finished_at: new Date().toISOString(), status: "failed", validation_result: "failed", summary: incident.human_summary, commit: currentCommit });
+
+    await markSuccess(botId);
+    await resolveDiscordIncidents(botId, `Successful ${action} at ${new Date().toISOString()}.`);
+    await appendFixAttempt(botId, action, true, `${action} completed successfully`);
+    await saveDiscordDeployment({
+      ...deployment,
+      commit: currentCommit,
+      finished_at: new Date().toISOString(),
+      status: "done",
+      validation_result: health.status,
+      rollback_available: Boolean(updatedBot.previous_healthy_commit),
+      summary: `${action} completed. ${health.summary}`,
+    });
+    await appendBotLog(botId, "info", `${action} completed`, { currentCommit, health });
     await writeSummaries();
     await updateDigestWithDiscordBots();
-    await appendAudit({ kind: "discord-bot-action-failed", botId, action, deployment_id, incident_id: incident.incident_id });
-    return { ok: false, deployment_id, incident_id: incident.incident_id, error: incident.human_summary };
-  }
-
-  if (["deploy", "redeploy", "start", "restart", "rollback"].includes(action)) {
-    if (action === "restart") {
-      await writeBotService(bot, botRoot, env);
-      await restartBotService(botId);
+    await appendAudit({ kind: "discord-bot-action-succeeded", botId, action, deployment_id, status: updatedBot.status, health_score: updatedBot.health_score });
+    return { ok: true, deployment_id, current_commit: currentCommit, status: updatedBot.status, health_score: updatedBot.health_score };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await appendAudit({ kind: "discord-bot-unhandled-error", botId, action, error: message });
+    if (deployment) {
+      const incident = await createIncident(botId, message, [action], true);
+      await saveDiscordDeployment({ ...deployment, finished_at: new Date().toISOString(), status: "failed", validation_result: "exception", summary: incident.human_summary, commit: currentCommit });
+      await writeSummaries();
+      await updateDigestWithDiscordBots();
+      return { ok: false, deployment_id: deployment.deployment_id, incident_id: incident.incident_id, error: incident.human_summary };
     }
-    const service = await getBotServiceStatus(botId);
-    if (!service.active) {
-      const incident = await createIncident(botId, service.text || "Service failed to become active after action.", [action], true);
-      await markFailure(botId);
-      await saveDiscordDeployment({ ...deployment, finished_at: new Date().toISOString(), status: "failed", validation_result: "service_not_active", summary: incident.human_summary, commit: currentCommit });
-      await appendAudit({ kind: "discord-bot-service-gate-failed", botId, action, deployment_id, incident_id: incident.incident_id });
-      return { ok: false, deployment_id, incident_id: incident.incident_id, error: incident.human_summary };
-    }
+    return { ok: false, error: message };
+  } finally {
+    if (lockHeld) await releaseBotLock(botId);
   }
-
-  await markRuntimeOk(bot);
-  const health = await inferBotHealth(bot, BOT_WORKSPACE_ROOT);
-  const updatedBot = await updateBot(botId, (current) => ({
-    ...current,
-    status: action === "stop" ? "stopped" : health.status,
-    health_score: health.health_score,
-    last_deployed_at: ["deploy", "redeploy", "rollback"].includes(action) ? new Date().toISOString() : current.last_deployed_at,
-    last_healthy_at: action === "stop" ? current.last_healthy_at : new Date().toISOString(),
-    current_commit: currentCommit,
-    previous_healthy_commit: current.current_commit || current.previous_healthy_commit,
-    restart_count: ["restart", "redeploy", "rollback", "deploy", "start"].includes(action) ? current.restart_count + 1 : current.restart_count,
-    last_deployment_id: deployment_id,
-    updated_at: new Date().toISOString(),
-  }));
-
-  await markSuccess(botId);
-  await appendFixAttempt(botId, action, true, `${action} completed successfully`);
-  await saveDiscordDeployment({
-    ...deployment,
-    commit: currentCommit,
-    finished_at: new Date().toISOString(),
-    status: "done",
-    validation_result: health.status,
-    rollback_available: Boolean(updatedBot.previous_healthy_commit),
-    summary: `${action} completed. ${health.summary}`,
-  });
-  await appendBotLog(botId, "info", `${action} completed`, { currentCommit, health });
-  await writeSummaries();
-  await updateDigestWithDiscordBots();
-  await appendAudit({ kind: "discord-bot-action-succeeded", botId, action, deployment_id, status: updatedBot.status, health_score: updatedBot.health_score });
-  return { ok: true, deployment_id, current_commit: currentCommit, status: updatedBot.status, health_score: updatedBot.health_score };
 }
 
 export async function monitorDiscordBots() {

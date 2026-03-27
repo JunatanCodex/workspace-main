@@ -79,6 +79,20 @@ export async function saveDiscordIncident(record: DiscordIncidentRecord): Promis
   await fs.writeFile(path.join(INCIDENTS_DIR, `${record.incident_id}.json`), `${JSON.stringify(record, null, 2)}\n`, "utf8");
 }
 
+export async function resolveDiscordIncidents(botId: string, note?: string): Promise<void> {
+  const rows = await listJsonRecords<DiscordIncidentRecord>(INCIDENTS_DIR);
+  await fs.mkdir(INCIDENTS_DIR, { recursive: true });
+  await Promise.all(rows.filter((row) => row.bot_id === botId && !row.resolved).map(async (row) => {
+    const next = {
+      ...row,
+      resolved: true,
+      resolved_at: new Date().toISOString(),
+      human_summary: note ? `${row.human_summary} Resolved: ${note}` : row.human_summary,
+    } satisfies DiscordIncidentRecord;
+    await fs.writeFile(path.join(INCIDENTS_DIR, `${row.incident_id}.json`), `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  }));
+}
+
 export async function getDiscordHealthReport(): Promise<DiscordHealthReport> {
   return readJsonIfExists<DiscordHealthReport>(HEALTH_FILE, { updatedAt: null, bots: [] });
 }

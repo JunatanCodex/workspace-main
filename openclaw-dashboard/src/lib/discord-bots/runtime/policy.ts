@@ -42,6 +42,7 @@ export function buildOperationPlan(bot: DiscordBotRegistryEntry, action: string)
     ops.push({ kind: "git-checkout", ref: bot.branch });
   }
   if (["deploy", "redeploy"].includes(action)) {
+    if (bot.runtime_type === "python") ops.push({ kind: "run-allowed", command: "python3 -m venv .venv" });
     if (bot.commands.install) ops.push({ kind: "run-allowed", command: bot.commands.install });
     if (bot.commands.build) ops.push({ kind: "run-allowed", command: bot.commands.build });
   }
