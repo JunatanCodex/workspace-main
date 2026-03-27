@@ -28,7 +28,7 @@ const discordNav = [
 ] as const;
 
 export function Sidebar() {
-  const [discordOpen, setDiscordOpen] = useState(true);
+  const [discordOpen, setDiscordOpen] = useState(false);
 
   return (
     <aside className="w-full border-b border-white/6 bg-[#0a0a0d]/90 backdrop-blur lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
@@ -50,15 +50,15 @@ export function Sidebar() {
           </Link>
         ))}
 
-        <div className="mt-2 rounded-xl border border-white/6 bg-black/20 p-1">
-          <button onClick={() => setDiscordOpen((v) => !v)} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/[0.04] hover:text-white">
+        <div>
+          <button onClick={() => setDiscordOpen((v) => !v)} className="group flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-white/[0.04] hover:text-white">
             <span>Discord Bots</span>
-            <span className="text-xs text-zinc-500">{discordOpen ? '▾' : '▸'}</span>
+            <span className="text-xs text-zinc-500 transition group-hover:text-zinc-300">{discordOpen ? '▾' : '▸'}</span>
           </button>
           {discordOpen ? (
-            <div className="mt-1 space-y-1 px-1 pb-1">
+            <div className="mt-1 space-y-1 pl-3">
               {discordNav.map(([label, href]) => (
-                <Link key={href} href={href} className="group flex items-center justify-between rounded-lg px-3 py-2 text-sm text-zinc-400 transition hover:bg-white/[0.04] hover:text-white">
+                <Link key={href} href={href} className="group flex items-center justify-between rounded-xl px-3 py-2 text-sm text-zinc-400 transition hover:bg-white/[0.04] hover:text-white">
                   <span>{label}</span>
                   <span className="opacity-0 text-xs text-zinc-500 transition group-hover:opacity-100">→</span>
                 </Link>
