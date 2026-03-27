@@ -2,7 +2,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getTasks } from "@/lib/fs/tasks";
 import { hoursSince } from "@/lib/utils/time";
-import { LiveTasksPage } from "@/components/tasks/live-tasks-page";
+import { KanbanBoard } from "@/components/tasks/kanban-board";
 
 function pickValues(values: string | string[] | undefined): string[] {
   if (!values) return [];
@@ -55,7 +55,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
         </form>
       </section>
 
-      <LiveTasksPage initialTasks={tasks} filteredTasks={filtered} />
+      <KanbanBoard initialTasks={tasks} filteredTasks={filtered} />
     </PageShell>
   );
 }
