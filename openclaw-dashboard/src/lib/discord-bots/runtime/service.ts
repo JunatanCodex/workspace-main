@@ -22,6 +22,7 @@ import { runSafeCommand } from "./exec";
 import { appendAudit } from "./audit";
 import { buildOperationPlan, ensureBotPathWithinWorkspace, type SafeOperation } from "./policy";
 import { getRetryDecision, markFailure, markSuccess } from "./retries";
+import { getBotServiceStatus, restartBotService, startBotService, stopBotService, writeBotService } from "./supervisor";
 
 const execFileAsync = promisify(execFile);
 const BOT_OPS_ROOT = path.join(AGENTS_ROOT, "discord-bot-ops");
@@ -114,10 +115,15 @@ async function executeOperation(bot: DiscordBotRegistryEntry, op: SafeOperation,
       return runSafeCommand(op.command, repoRoot, env);
     case "health-check":
       return runSafeCommand(op.command, repoRoot, env);
-    case "start-managed":
-      return runSafeCommand(`nohup ${op.command} > .bot-stdout.log 2> .bot-stderr.log < /dev/null & echo $! > .bot-pid`, repoRoot, env);
-    case "stop-managed":
-      return runSafeCommand("test -f .bot-pid && kill $(cat .bot-pid) || true", repoRoot, env);
+    case "start-managed": {
+      await writeBotService(bot, repoRoot, env);
+      await startBotService(bot.bot_id);
+      return { ok: true, stdout: "systemd user service started", stderr: "", startedAt: new Date().toISOString(), finishedAt: new Date().toISOString() };
+    }
+    case "stop-managed": {
+      await stopBotService(bot.bot_id);
+      return { ok: true, stdout: "systemd user service stopped", stderr: "", startedAt: new Date().toISOString(), finishedAt: new Date().toISOString() };
+    }
   }
 }
 
@@ -218,6 +224,21 @@ export async function runBotAction(botId: string, action: string) {
     await updateDigestWithDiscordBots();
     await appendAudit({ kind: "discord-bot-action-failed", botId, action, deployment_id, incident_id: incident.incident_id });
     return { ok: false, deployment_id, incident_id: incident.incident_id, error: incident.human_summary };
+  }
+
+  if (["deploy", "redeploy", "start", "restart", "rollback"].includes(action)) {
+    if (action === "restart") {
+      await writeBotService(bot, botRoot, env);
+      await restartBotService(botId);
+    }
+    const service = await getBotServiceStatus(botId);
+    if (!service.active) {
+      const incident = await createIncident(botId, service.text || "Service failed to become active after action.", [action], true);
+      await markFailure(botId);
+      await saveDiscordDeployment({ ...deployment, finished_at: new Date().toISOString(), status: "failed", validation_result: "service_not_active", summary: incident.human_summary, commit: currentCommit });
+      await appendAudit({ kind: "discord-bot-service-gate-failed", botId, action, deployment_id, incident_id: incident.incident_id });
+      return { ok: false, deployment_id, incident_id: incident.incident_id, error: incident.human_summary };
+    }
   }
 
   await markRuntimeOk(bot);
