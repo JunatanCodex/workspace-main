@@ -15,7 +15,7 @@ export function BulkActions({ botIds }: { botIds: string[] }) {
   async function run() {
     if (!selected.length) return;
     const risky = action === "stop" || action === "redeploy";
-    if (risky && !window.confirm(`Run ${action} on ${selected.length} selected bot(s)?`)) return;
+    if (risky && !window.confirm(`Run ${action} on ${selected.length} selected bot(s)? This is a destructive/operator-gated action.`)) return;
     setPending(true);
     setMessage("");
     const response = await fetch("/api/discord-bots/bulk", {

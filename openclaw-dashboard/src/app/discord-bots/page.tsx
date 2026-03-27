@@ -4,6 +4,7 @@ import { BulkActions } from "@/components/discord-bots/bulk-actions";
 import { DiscordBotsOverview } from "@/components/discord-bots/discord-bots-overview";
 import { ExportButton } from "@/components/discord-bots/export-button";
 import { FleetActions } from "@/components/discord-bots/fleet-actions";
+import { ImportRestore } from "@/components/discord-bots/import-restore";
 import { MetricsPanels } from "@/components/discord-bots/metrics-panels";
 import { MonitorBotsButton } from "@/components/discord-bots/monitor-bots-button";
 import { ReencryptSecretsButton } from "@/components/discord-bots/reencrypt-secrets";
@@ -33,6 +34,9 @@ export default async function DiscordBotsPage() {
           <div className="flex flex-wrap items-center gap-3"><ReencryptSecretsButton /><ExportButton /></div>
         </div>
         <BulkActions botIds={bots.map((b) => b.bot_id)} />
+        <div className="border-t border-white/6 pt-4">
+          <ImportRestore />
+        </div>
       </PremiumPanel>
       <DiscordBotsOverview initial={{ bots, deployments, incidents, health, updatedAt: new Date().toISOString() }} />
     </PageShell>
