@@ -1,6 +1,7 @@
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import { NextRequest, NextResponse } from "next/server";
+import { verifyExport } from "@/lib/discord-bots/export-signature";
 import { AGENTS_ROOT } from "@/lib/config";
 
 const BOT_OPS_ROOT = path.join(AGENTS_ROOT, 'discord-bot-ops');
@@ -23,6 +24,18 @@ export async function POST(request: NextRequest) {
 
   if (!Array.isArray(parsed.registry) || !Array.isArray(parsed.deployments) || !Array.isArray(parsed.incidents) || typeof parsed.health !== 'object') {
     return NextResponse.json({ ok: false, error: 'Payload missing required export sections.' }, { status: 400 });
+  }
+
+  const signedSection = {
+    registry: parsed.registry,
+    deployments: parsed.deployments,
+    incidents: parsed.incidents,
+    health: parsed.health,
+    exportedAt: parsed.exportedAt,
+  };
+  const signatureValid = await verifyExport(signedSection, parsed.signature);
+  if (!signatureValid) {
+    return NextResponse.json({ ok: false, error: 'Export signature verification failed.' }, { status: 400 });
   }
 
   await fs.mkdir(DEPLOYMENTS_DIR, { recursive: true });

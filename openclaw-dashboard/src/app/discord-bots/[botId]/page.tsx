@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PremiumPanel, PremiumKicker } from "@/components/ui/premium";
+import { ActionWithReason } from "@/components/discord-bots/action-with-reason";
 import { BotActionButtons } from "@/components/discord-bots/bot-action-buttons";
 import { RollbackCard } from "@/components/discord-bots/rollback-card";
 import { SecretEditor } from "@/components/discord-bots/secret-editor";
@@ -46,6 +47,9 @@ export default async function DiscordBotDetailPage({ params }: { params: Promise
           <PremiumPanel>
             <PremiumKicker>Controls</PremiumKicker>
             <div className="mt-4"><BotActionButtons botId={bot.bot_id} enabledActions={bot.available_actions} /></div>
+            <div className="mt-4 border-t border-white/6 pt-4">
+              <ActionWithReason botId={bot.bot_id} action="redeploy" />
+            </div>
           </PremiumPanel>
 
           <PremiumPanel>

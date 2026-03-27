@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { signExport } from "@/lib/discord-bots/export-signature";
 import { getDiscordBotRegistry, getDiscordDeployments, getDiscordHealthReport, getDiscordIncidents } from "@/lib/discord-bots/store";
 
 export async function GET() {
@@ -8,5 +9,8 @@ export async function GET() {
     getDiscordIncidents(),
     getDiscordHealthReport(),
   ]);
-  return NextResponse.json({ exportedAt: new Date().toISOString(), registry, deployments, incidents, health });
+  const exportedAt = new Date().toISOString();
+  const signedSection = { exportedAt, registry, deployments, incidents, health };
+  const signature = await signExport(signedSection);
+  return NextResponse.json({ ...signedSection, signature });
 }
