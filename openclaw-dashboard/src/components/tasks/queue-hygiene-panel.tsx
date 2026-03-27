@@ -3,9 +3,9 @@
 import { useState } from "react";
 
 const ACTIONS = [
-  ['cancel-stale-approval', 'Cancel stale approvals'],
-  ['cancel-superseded-failed', 'Cancel superseded failed'],
-  ['requeue-stalled', 'Touch stale queued tasks'],
+  ['cancel-stale-approval', 'Cancel stale approvals', 'Retires needs_approval tasks that have gone stale and are no longer waiting on a meaningful human decision.'],
+  ['cancel-superseded-failed', 'Cancel superseded failed', 'Clears failed tasks that were already made obsolete by a later successful attempt or newer equivalent work.'],
+  ['requeue-stalled', 'Touch stale queued tasks', 'Refreshes old queued tasks so they are visibly acknowledged without changing them to a different status.'],
 ] as const;
 
 export function QueueHygienePanel({ staleApprovalCount }: { staleApprovalCount: number }) {
@@ -32,9 +32,12 @@ export function QueueHygienePanel({ staleApprovalCount }: { staleApprovalCount: 
           <div className="text-sm font-medium text-zinc-100">Queue hygiene</div>
           <div className="mt-1 text-sm text-zinc-400">Stale approval debt: {staleApprovalCount}</div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          {ACTIONS.map(([action, label]) => (
-            <button key={action} onClick={() => run(action)} disabled={pending !== null} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 disabled:opacity-50">{pending === action ? 'Running…' : label}</button>
+        <div className="grid gap-3 md:grid-cols-3">
+          {ACTIONS.map(([action, label, description]) => (
+            <div key={action} className="rounded-xl border border-white/8 bg-black/20 p-3">
+              <button onClick={() => run(action)} disabled={pending !== null} className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 disabled:opacity-50">{pending === action ? 'Running…' : label}</button>
+              <div className="mt-2 text-xs leading-5 text-zinc-500">{description}</div>
+            </div>
           ))}
         </div>
       </div>
