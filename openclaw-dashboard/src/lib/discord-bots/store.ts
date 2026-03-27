@@ -10,6 +10,7 @@ import type {
   DiscordIncidentRecord,
   DiscordHealthReport,
 } from "./types";
+import { decryptSecret, encryptSecret } from "./crypto";
 
 const BOT_OPS_ROOT = path.join(AGENTS_ROOT, "discord-bot-ops");
 const REGISTRY_FILE = path.join(BOT_OPS_ROOT, "bot-registry.json");
@@ -52,11 +53,34 @@ export async function saveDiscordBotRegistry(rows: DiscordBotRegistryEntry[]): P
 
 export async function getDiscordBotSecrets(): Promise<Record<string, DiscordBotSecretRecord>> {
   const json = await readJsonIfExists<Record<string, DiscordBotSecretRecord>>(SECRETS_FILE, {});
-  return json && typeof json === "object" ? json : {};
+  const rows = json && typeof json === "object" ? json : {};
+  const out: Record<string, DiscordBotSecretRecord> = {};
+  for (const [botId, record] of Object.entries(rows)) {
+    out[botId] = {
+      DISCORD_TOKEN: await decryptSecret(record.DISCORD_TOKEN),
+      CLIENT_ID: await decryptSecret(record.CLIENT_ID),
+      GUILD_ID: await decryptSecret(record.GUILD_ID),
+      additional_env: record.additional_env
+        ? Object.fromEntries(await Promise.all(Object.entries(record.additional_env).map(async ([k, v]) => [k, await decryptSecret(v)])))
+        : undefined,
+    };
+  }
+  return out;
 }
 
 export async function saveDiscordBotSecrets(rows: Record<string, DiscordBotSecretRecord>): Promise<void> {
-  await fs.writeFile(SECRETS_FILE, `${JSON.stringify(rows, null, 2)}\n`, "utf8");
+  const encrypted: Record<string, DiscordBotSecretRecord> = {};
+  for (const [botId, record] of Object.entries(rows)) {
+    encrypted[botId] = {
+      DISCORD_TOKEN: record.DISCORD_TOKEN ? await encryptSecret(record.DISCORD_TOKEN) : undefined,
+      CLIENT_ID: record.CLIENT_ID ? await encryptSecret(record.CLIENT_ID) : undefined,
+      GUILD_ID: record.GUILD_ID ? await encryptSecret(record.GUILD_ID) : undefined,
+      additional_env: record.additional_env
+        ? Object.fromEntries(await Promise.all(Object.entries(record.additional_env).map(async ([k, v]) => [k, await encryptSecret(v)])))
+        : undefined,
+    };
+  }
+  await fs.writeFile(SECRETS_FILE, `${JSON.stringify(encrypted, null, 2)}\n`, "utf8");
 }
 
 export async function getDiscordDeployments(): Promise<DiscordDeploymentRecord[]> {

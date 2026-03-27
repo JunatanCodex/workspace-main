@@ -4,6 +4,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PremiumPanel, PremiumKicker } from "@/components/ui/premium";
 import { BotActionButtons } from "@/components/discord-bots/bot-action-buttons";
+import { RollbackCard } from "@/components/discord-bots/rollback-card";
 import { SecretEditor } from "@/components/discord-bots/secret-editor";
 import { getDiscordBotById } from "@/lib/discord-bots/store";
 
@@ -87,8 +88,9 @@ export default async function DiscordBotDetailPage({ params }: { params: Promise
 
           <PremiumPanel>
             <PremiumKicker>Rollback & secrets</PremiumKicker>
-            <div className="mt-3 text-sm text-zinc-400">Rollback target: {bot.previous_healthy_commit || 'Not recorded yet'}</div>
-            <div className="mt-2 text-sm text-zinc-500">When a new deploy is healthy, the previous known healthy commit is preserved here for one-click rollback.</div>
+            <div className="mt-4">
+              <RollbackCard botId={bot.bot_id} rollbackCommit={bot.previous_healthy_commit} currentCommit={bot.current_commit} />
+            </div>
             <div className="mt-4 border-t border-white/6 pt-4">
               <SecretEditor botId={bot.bot_id} />
             </div>
