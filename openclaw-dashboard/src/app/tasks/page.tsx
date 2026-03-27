@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageShell } from "@/components/layout/page-shell";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getTasks } from "@/lib/fs/tasks";
@@ -33,7 +34,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
   });
 
   return (
-    <PageShell title="Task queue" description="A Linear-style issue view for your shared agent queue: searchable, filterable, and now polling-backed for live operational monitoring.">
+    <PageShell title="Task queue" description="A Kanban-style shared agent queue: searchable, filterable, draggable, and live updated." actions={<Link href="/tasks/archived" className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 hover:bg-white/[0.06]">Archived tasks</Link>}>
       <section className="rounded-2xl border border-white/8 bg-zinc-950/80 p-5">
         <SectionHeader title="Filters" description="Search and refine the shared task queue by status, agent, and recency." />
         <form className="grid gap-3 md:grid-cols-[1fr_220px_220px_220px_auto]">

@@ -4,6 +4,7 @@ export const OPENCLAW_ROOT = process.env.OPENCLAW_HOME || "/home/jim/.openclaw";
 export const AGENTS_ROOT = path.join(OPENCLAW_ROOT, "agents");
 export const SHARED_ROOT = path.join(OPENCLAW_ROOT, "shared");
 export const TASKS_FILE = path.join(SHARED_ROOT, "tasks.json");
+export const ARCHIVED_TASKS_FILE = path.join(SHARED_ROOT, "tasks-archived.json");
 export const ROUTING_FILE = path.join(SHARED_ROOT, "routing-map.json");
 export const DIGEST_FILE = path.join(SHARED_ROOT, "digest.md");
 export const EVENTS_FILE = path.join(SHARED_ROOT, "event-log.json");

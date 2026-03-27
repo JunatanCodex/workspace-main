@@ -16,21 +16,21 @@ export function TaskCard({ task, href, onDragStart }: { task: TaskRecord; href: 
     <div
       draggable
       onDragStart={() => onDragStart(taskId)}
-      className={`rounded-2xl border p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.01)] transition hover:-translate-y-0.5 hover:bg-white/[0.03] cursor-grab active:cursor-grabbing ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : "border-white/8 bg-zinc-950/80"}`}
+      className={`rounded-2xl border p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.01)] transition hover:-translate-y-0.5 hover:bg-white/[0.03] cursor-grab active:cursor-grabbing ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : "border-white/8 bg-zinc-950/80"}`}
     >
-      <div className="mb-3">
+      <div className="mb-2">
         <StatusBadge value={task.status || 'queued'} />
       </div>
       <div>
-        <Link href={href} className="block break-words font-medium text-zinc-100 hover:text-white">{getTaskLabelView(task)}</Link>
-        <div className="mt-1 text-xs text-zinc-500 break-all">{taskId || '—'}</div>
+        <Link href={href} className="block break-words text-sm font-medium text-zinc-100 hover:text-white">{getTaskLabelView(task)}</Link>
+        <div className="mt-1 text-[11px] text-zinc-500 break-all">{taskId || '—'}</div>
       </div>
-      <div className="mt-3 text-sm text-zinc-400">{task.owner || 'Unassigned'}</div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {stalled ? <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-300">stalled {staleHours ? `~${Math.round(staleHours)}h` : ""}</span> : null}
-        {failed ? <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-[11px] text-red-300">failure</span> : null}
+      <div className="mt-2 text-xs text-zinc-400">{task.owner || 'Unassigned'}</div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {stalled ? <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">stalled {staleHours ? `~${Math.round(staleHours)}h` : ""}</span> : null}
+        {failed ? <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] text-red-300">failure</span> : null}
       </div>
-      <div className="mt-3 text-xs text-zinc-500">Updated {formatCalendarDateTime(task.updatedAt)}</div>
+      <div className="mt-2 text-[11px] text-zinc-500">Updated {formatCalendarDateTime(task.updatedAt)}</div>
     </div>
   );
 }

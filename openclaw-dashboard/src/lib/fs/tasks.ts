@@ -2,11 +2,13 @@ import { promises as fs } from "node:fs";
 import { TASKS_FILE, STALLED_IN_PROGRESS_HOURS, STALLED_QUEUED_HOURS } from "@/lib/config";
 import type { TaskRecord } from "@/lib/types";
 import { hoursSince } from "@/lib/utils/time";
+import { autoArchiveDoneTasks } from "./tasks-archive";
 import { readJsonIfExists } from "./safe-read";
 
 export async function getTasks(): Promise<TaskRecord[]> {
   const tasks = await readJsonIfExists<TaskRecord[]>(TASKS_FILE, []);
-  return Array.isArray(tasks) ? tasks : [];
+  const rows = Array.isArray(tasks) ? tasks : [];
+  return autoArchiveDoneTasks(rows);
 }
 
 export async function saveTasks(tasks: TaskRecord[]): Promise<void> {
