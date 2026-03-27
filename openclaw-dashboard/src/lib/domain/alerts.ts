@@ -5,9 +5,10 @@ import { getRoutingMap } from "@/lib/fs/routing";
 import { getTasks, isTaskFailed, isTaskStalled } from "@/lib/fs/tasks";
 import { getSharedEvents } from "@/lib/fs/events";
 import { isAgentUnstable, isHeartbeatLate, isQueuedOnDemandStuck } from "@/lib/domain/fleet-health";
+import { getDiscordBotViews } from "@/lib/discord-bots/store";
 
 export async function getAlerts(): Promise<AlertItem[]> {
-  const [agents, tasks, routing, config, events] = await Promise.all([getAgents(), getTasks(), getRoutingMap(), getOpenClawConfig(), getSharedEvents()]);
+  const [agents, tasks, routing, config, events, discordBots] = await Promise.all([getAgents(), getTasks(), getRoutingMap(), getOpenClawConfig(), getSharedEvents(), getDiscordBotViews()]);
   const alerts: AlertItem[] = [];
   const heartbeatEvery = config.agents?.defaults?.heartbeat?.every || "60m";
 
@@ -114,6 +115,16 @@ export async function getAlerts(): Promise<AlertItem[]> {
         href: "/routing",
       });
     }
+  }
+
+  for (const bot of discordBots.filter((item) => item.status === "failed" || item.status === "degraded" || item.health_score < 70)) {
+    alerts.push({
+      type: "discord_bot",
+      title: `${bot.name} needs attention`,
+      severity: bot.status === "failed" || bot.health_score < 40 ? "critical" : "warning",
+      description: `Status ${bot.status}; health score ${bot.health_score}; incidents ${bot.incident_count}.`,
+      href: `/discord-bots/${bot.bot_id}`,
+    });
   }
 
   const recentMaintenance = events

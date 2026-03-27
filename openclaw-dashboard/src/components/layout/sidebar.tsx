@@ -4,6 +4,7 @@ const nav = [
   ["Overview", "/"],
   ["Agents", "/agents"],
   ["Tasks", "/tasks"],
+  ["Discord Bots", "/discord-bots"],
   ["Business Pipeline", "/business-pipeline"],
   ["Developer Pipeline", "/developer-pipeline"],
   ["Pipelines", "/pipelines"],
