@@ -16,7 +16,7 @@ export function TaskCard({ task, href, onDragStart }: { task: TaskRecord; href: 
     <div
       draggable
       onDragStart={() => onDragStart(taskId)}
-      className={`rounded-2xl border p-4 transition hover:bg-white/[0.03] cursor-grab active:cursor-grabbing ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : "border-white/8 bg-zinc-950/80"}`}
+      className={`rounded-2xl border p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.01)] transition hover:-translate-y-0.5 hover:bg-white/[0.03] cursor-grab active:cursor-grabbing ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : "border-white/8 bg-zinc-950/80"}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>

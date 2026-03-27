@@ -47,9 +47,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-full bg-[#07070a] text-zinc-100 antialiased">
         <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_22%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.06),transparent_18%)] lg:flex">
           <Sidebar />
-          <main className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+          <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8 xl:px-10 lg:py-8">
             <TopBar />
-            <div className="max-w-7xl">
+            <div className="w-full max-w-none">
               {children}
             </div>
           </main>
