@@ -112,6 +112,7 @@ export function DeployBotForm() {
 
       <PremiumPanel>
         <PremiumKicker>Commands</PremiumKicker>
+        <div className="mt-2 text-sm text-zinc-500">Python bots should prefer a local <code className="rounded bg-black/30 px-1 py-0.5">.venv</code> runtime instead of system pip.</div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
         {[
           ["install", "Install command", template.commands.install],

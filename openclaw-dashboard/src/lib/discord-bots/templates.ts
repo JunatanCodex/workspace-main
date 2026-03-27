@@ -42,10 +42,10 @@ export const DISCORD_BOT_TEMPLATES: DiscordBotTemplate[] = [
     runtime_type: "python",
     required_env: ["DISCORD_TOKEN"],
     commands: {
-      install: "python -m pip install -r requirements.txt",
-      build: "python -m compileall .",
-      start: "python bot.py",
-      healthCheck: "python healthcheck.py",
+      install: ".venv/bin/pip install -r requirements.txt",
+      build: ".venv/bin/python -m compileall .",
+      start: ".venv/bin/python bot.py",
+      healthCheck: ".venv/bin/python healthcheck.py",
     },
   },
   {
@@ -58,6 +58,30 @@ export const DISCORD_BOT_TEMPLATES: DiscordBotTemplate[] = [
       build: "docker compose build",
       start: "docker compose up -d",
       healthCheck: "docker compose ps",
+    },
+  },
+  {
+    id: "py-cord-bot",
+    label: "Pycord / discord.py bot",
+    runtime_type: "python",
+    required_env: ["DISCORD_TOKEN"],
+    commands: {
+      install: ".venv/bin/pip install -r requirements.txt",
+      build: ".venv/bin/python -m compileall .",
+      start: ".venv/bin/python main.py",
+      healthCheck: ".venv/bin/python healthcheck.py",
+    },
+  },
+  {
+    id: "nextcord-bot",
+    label: "Nextcord bot",
+    runtime_type: "python",
+    required_env: ["DISCORD_TOKEN"],
+    commands: {
+      install: ".venv/bin/pip install -r requirements.txt",
+      build: ".venv/bin/python -m compileall .",
+      start: ".venv/bin/python bot.py",
+      healthCheck: ".venv/bin/python healthcheck.py",
     },
   },
 ];
