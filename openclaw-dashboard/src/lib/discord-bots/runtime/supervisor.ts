@@ -20,7 +20,7 @@ export async function writeBotService(bot: DiscordBotRegistryEntry, repoRoot: st
   const envLines = Object.entries(env)
     .map(([key, value]) => `Environment=${key}=${String(value).replace(/\n/g, " ")}`)
     .join("\n");
-  const content = `[Unit]\nDescription=OpenClaw Discord Bot ${bot.name}\nAfter=network.target\n\n[Service]\nType=simple\nWorkingDirectory=${repoRoot}\n${envLines}\nExecStart=/bin/bash -lc '${bot.commands.start}'\nRestart=${bot.restart_policy === "manual" ? "no" : "on-failure"}\nRestartSec=5\nStandardOutput=append:${path.join(repoRoot, ".bot-stdout.log")}\nStandardError=append:${path.join(repoRoot, ".bot-stderr.log")}\n\n[Install]\nWantedBy=default.target\n`;
+  const content = `[Unit]\nDescription=OpenClaw Discord Bot ${bot.name}\nAfter=network-online.target default.target\nWants=network-online.target\n\n[Service]\nType=simple\nWorkingDirectory=${repoRoot}\n${envLines}\nExecStart=/bin/bash -lc '${bot.commands.start}'\nRestart=${bot.restart_policy === "manual" ? "no" : "on-failure"}\nRestartSec=5\nStartLimitIntervalSec=300\nStartLimitBurst=10\nStandardOutput=append:${path.join(repoRoot, ".bot-stdout.log")}\nStandardError=append:${path.join(repoRoot, ".bot-stderr.log")}\n\n[Install]\nWantedBy=default.target\n`;
   await fs.writeFile(servicePath(bot.bot_id), content, "utf8");
   await execFileAsync("systemctl", ["--user", "daemon-reload"]);
   return serviceName(bot.bot_id);

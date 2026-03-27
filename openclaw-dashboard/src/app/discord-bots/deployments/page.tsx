@@ -23,6 +23,8 @@ export default async function DiscordBotDeploymentsPage() {
               <div>Finished: {item.finished_at ? new Date(item.finished_at).toLocaleString() : "—"}</div>
               <div>Branch: {item.branch}</div>
               <div>Commit: {item.commit || "—"}</div>
+              <div>Rollback available: {item.rollback_available ? 'yes' : 'no'}</div>
+              <div>Validation: {item.validation_result || '—'}</div>
             </div>
             {item.summary ? <div className="mt-3 text-sm text-zinc-300">{item.summary}</div> : null}
           </PremiumPanel>
