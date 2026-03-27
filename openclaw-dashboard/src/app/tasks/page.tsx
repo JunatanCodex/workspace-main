@@ -58,7 +58,7 @@ export default async function TasksPage({ searchParams }: { searchParams?: Promi
             <option value="today">Updated today</option>
             <option value="week">Updated this week</option>
           </select>
-          <button type="submit" className="rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900">Apply</button>
+          <button type="submit" className="rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">Apply</button>
         </form>
       </section>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { GhostButton } from "@/components/ui/button-link";
 
 const ACTIONS = [
   ['cancel-stale-approval', 'Cancel stale approvals', 'Retires needs_approval tasks that have gone stale and are no longer waiting on a meaningful human decision.'],
@@ -35,7 +36,7 @@ export function QueueHygienePanel({ staleApprovalCount }: { staleApprovalCount: 
         <div className="grid gap-3 md:grid-cols-3">
           {ACTIONS.map(([action, label, description]) => (
             <div key={action} className="rounded-xl border border-white/8 bg-black/20 p-3">
-              <button onClick={() => run(action)} disabled={pending !== null} className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-zinc-300 disabled:opacity-50">{pending === action ? 'Running…' : label}</button>
+              <GhostButton onClick={() => run(action)} disabled={pending !== null} className="w-full">{pending === action ? 'Running…' : label}</GhostButton>
               <div className="mt-2 text-xs leading-5 text-zinc-500">{description}</div>
             </div>
           ))}
