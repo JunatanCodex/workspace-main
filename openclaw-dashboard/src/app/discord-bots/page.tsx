@@ -7,16 +7,19 @@ import { FleetActions } from "@/components/discord-bots/fleet-actions";
 import { ImportRestore } from "@/components/discord-bots/import-restore";
 import { MetricsPanels } from "@/components/discord-bots/metrics-panels";
 import { MonitorBotsButton } from "@/components/discord-bots/monitor-bots-button";
+import { OperatorRoleSwitcher } from "@/components/discord-bots/operator-role-switcher";
 import { ReencryptSecretsButton } from "@/components/discord-bots/reencrypt-secrets";
 import { PremiumPanel } from "@/components/ui/premium";
+import { getOperatorPolicy } from "@/lib/discord-bots/permissions";
 import { getDiscordBotViews, getDiscordDeployments, getDiscordHealthReport, getDiscordIncidents } from "@/lib/discord-bots/store";
 
 export default async function DiscordBotsPage() {
-  const [bots, deployments, incidents, health] = await Promise.all([
+  const [bots, deployments, incidents, health, policy] = await Promise.all([
     getDiscordBotViews(),
     getDiscordDeployments(),
     getDiscordIncidents(),
     getDiscordHealthReport(),
+    getOperatorPolicy(),
   ]);
 
   return (
@@ -31,7 +34,7 @@ export default async function DiscordBotsPage() {
       <PremiumPanel className="mb-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FleetActions />
-          <div className="flex flex-wrap items-center gap-3"><ReencryptSecretsButton /><ExportButton /></div>
+          <div className="flex flex-wrap items-center gap-3"><OperatorRoleSwitcher initialRole={policy.activeRole} /><ReencryptSecretsButton /><ExportButton /></div>
         </div>
         <BulkActions botIds={bots.map((b) => b.bot_id)} />
         <div className="border-t border-white/6 pt-4">

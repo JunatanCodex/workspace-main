@@ -1,6 +1,7 @@
 import { PageShell } from "@/components/layout/page-shell";
-import { PremiumPanel, PremiumKicker } from "@/components/ui/premium";
 import { IncidentFilter } from "@/components/discord-bots/incident-filter";
+import { IncidentNotes } from "@/components/discord-bots/incident-notes";
+import { PremiumPanel, PremiumKicker } from "@/components/ui/premium";
 import { getDiscordHealthReport, getDiscordIncidents } from "@/lib/discord-bots/store";
 
 export default async function DiscordBotIncidentsPage() {

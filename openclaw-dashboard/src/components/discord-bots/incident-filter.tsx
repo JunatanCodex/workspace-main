@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { IncidentNotes } from "@/components/discord-bots/incident-notes";
 
 type Incident = {
   incident_id: string;
@@ -10,6 +11,7 @@ type Incident = {
   likely_cause?: string;
   resolved: boolean;
   resolved_at?: string | null;
+  notes?: Array<{ at: string; note: string }>;
 };
 
 export function IncidentFilter({ incidents }: { incidents: Incident[] }) {
@@ -41,6 +43,7 @@ export function IncidentFilter({ incidents }: { incidents: Incident[] }) {
             <div className="mt-3 text-sm text-zinc-300">{incident.human_summary}</div>
             {incident.likely_cause ? <div className="mt-2 text-sm text-zinc-400">Likely cause: {incident.likely_cause}</div> : null}
             {incident.resolved_at ? <div className="mt-2 text-xs text-zinc-500">Resolved at: {incident.resolved_at}</div> : null}
+            <div className="mt-4 border-t border-white/6 pt-4"><IncidentNotes incidentId={incident.incident_id} notes={incident.notes || []} /></div>
           </div>
         ))}
         {!filtered.length ? <div className="text-sm text-zinc-500">No incidents match the current filter.</div> : null}
