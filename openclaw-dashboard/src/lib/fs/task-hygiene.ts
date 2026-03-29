@@ -3,6 +3,7 @@ import type { TaskRecord } from "@/lib/types";
 import { hoursSince } from "@/lib/utils/time";
 
 const STALE_APPROVAL_HOURS = 48;
+const STALE_BACKLOG_HOURS = 24 * 14;
 
 export function isStaleApproval(task: TaskRecord) {
   return String(task.status || '') === 'needs_approval' && (hoursSince(task.updatedAt || task.createdAt) ?? 0) >= STALE_APPROVAL_HOURS;
@@ -25,7 +26,7 @@ export async function autoRetireSyntheticApprovalTasks() {
   return changed;
 }
 
-export async function runQueueHygiene(action: 'cancel-stale-approval' | 'cancel-superseded-failed' | 'requeue-stalled') {
+export async function runQueueHygiene(action: 'cancel-stale-approval' | 'cancel-superseded-failed' | 'requeue-stalled' | 'retire-stale-backlog') {
   const tasks = await getTasks();
   let changed = 0;
 
@@ -59,6 +60,17 @@ export async function runQueueHygiene(action: 'cancel-stale-approval' | 'cancel-
         task.statusHistory = [...normalizeStatusHistory(task), { status: 'queued', at: task.updatedAt, note: 'Touched during queue hygiene to re-acknowledge stale queued task.' }];
         changed += 1;
       }
+    }
+  }
+
+  if (action === 'retire-stale-backlog') {
+    for (const task of tasks) {
+      const age = hoursSince(task.updatedAt || task.createdAt) ?? 0;
+      if (String(task.status || '') !== 'queued' || age < STALE_BACKLOG_HOURS) continue;
+      task.status = 'cancelled';
+      task.updatedAt = new Date().toISOString();
+      task.statusHistory = [...normalizeStatusHistory(task), { status: 'cancelled', at: task.updatedAt, note: 'Cancelled during queue hygiene: long-lived queued backlog item retired to reduce persistent stale-task noise.' }];
+      changed += 1;
     }
   }
 
