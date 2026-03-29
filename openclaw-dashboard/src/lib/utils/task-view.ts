@@ -10,11 +10,17 @@ export function isTaskFailedView(task: TaskRecord): boolean {
   return status === "failed" || status === "error" || Boolean(task.failureReason);
 }
 
+export function isTaskBacklogView(task: TaskRecord): boolean {
+  const status = task.status ?? "queued";
+  const since = hoursSince(task.updatedAt || task.createdAt);
+  if (since === null) return false;
+  return status === "queued" && since > 24;
+}
+
 export function isTaskStalledView(task: TaskRecord): boolean {
   const status = task.status ?? "queued";
   const since = hoursSince(task.updatedAt || task.createdAt);
   if (since === null) return false;
-  if (status === "queued") return since > 24;
   if (status === "in_progress") return since > 12;
   return false;
 }

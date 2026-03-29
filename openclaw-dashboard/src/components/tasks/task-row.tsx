@@ -1,23 +1,25 @@
 import Link from "next/link";
 import type { TaskRecord } from "@/lib/types";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { getTaskLabelView, isTaskFailedView, isTaskStalledView } from "@/lib/utils/task-view";
+import { getTaskLabelView, isTaskBacklogView, isTaskFailedView, isTaskStalledView } from "@/lib/utils/task-view";
 import { formatCalendarDateTime, hoursSince } from "@/lib/utils/time";
 
 export function TaskRow({ task, href, duplicate = false }: { task: TaskRecord; href: string; duplicate?: boolean }) {
   const stalled = isTaskStalledView(task);
+  const backlog = isTaskBacklogView(task);
   const failed = isTaskFailedView(task);
   const staleHours = hoursSince(task.updatedAt || task.createdAt);
   return (
     <Link
       href={href}
-      className={`grid gap-4 rounded-2xl border p-4 transition hover:bg-white/[0.03] md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : duplicate ? "border-violet-500/20 bg-violet-500/[0.04]" : "border-white/8 bg-zinc-950/80"}`}
+      className={`grid gap-4 rounded-2xl border p-4 transition hover:bg-white/[0.03] md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] ${failed ? "border-red-500/20 bg-red-500/[0.05]" : stalled ? "border-amber-500/20 bg-amber-500/[0.05]" : duplicate ? "border-violet-500/20 bg-violet-500/[0.04]" : backlog ? "border-white/10 bg-white/[0.02]" : "border-white/8 bg-zinc-950/80"}`}
     >
       <div>
         <div className="font-medium text-zinc-100">{getTaskLabelView(task)}</div>
         <div className="mt-1 text-sm text-zinc-500">ID: {task.id || "—"}</div>
         <div className="mt-2 flex flex-wrap gap-2">
           {stalled ? <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-300">stalled {staleHours ? `~${Math.round(staleHours)}h` : ""}</span> : null}
+          {!stalled && backlog ? <span className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] text-zinc-400">backlog {staleHours ? `~${Math.round(staleHours)}h` : ""}</span> : null}
           {failed ? <span className="rounded-full bg-red-500/10 px-2.5 py-1 text-[11px] text-red-300">failure</span> : null}
           {duplicate ? <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-[11px] text-violet-300">possible duplicate</span> : null}
         </div>
